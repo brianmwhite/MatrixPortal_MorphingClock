@@ -1,21 +1,21 @@
+# digit morphing code ported from https://www.instructables.com/Morphing-Digital-Clock/
+# https://github.com/hwiguna/HariFun_166_Morphing_Clock
+
+# some code started from https://github.com/adafruit/Adafruit_Learning_System_Guides/blob/main/Metro_Matrix_Clock/code.py
+# SPDX-FileCopyrightText: 2020 John Park for Adafruit Industries
+# SPDX-License-Identifier: MIT
+
 import time
 import board
 import displayio
-import random
 
-# import terminalio
-# from adafruit_display_text.label import Label
-# from adafruit_bitmap_font import bitmap_font
 from adafruit_matrixportal.network import Network
 from adafruit_matrixportal.matrix import Matrix
-from adafruit_matrixportal.graphics import Graphics
-from adafruit_display_shapes.rect import Rect
 
-# from adafruit_display_shapes.line import Line
-# from adafruit_display_shapes.rect import Rect
 from Digit import Digit
 
 displayio.release_displays()
+
 # --- Display setup ---
 matrix = Matrix()
 display = matrix.display
@@ -30,6 +30,7 @@ bitmap = displayio.Bitmap(64, 32, 2)  # Create a bitmap object,width, height, bi
 color = displayio.Palette(2)  # Create a color palette
 color[0] = 0x000000  # black background
 color[1] = 0x0000FF  # blue
+
 # Make a background color fill
 bg_sprite = displayio.TileGrid(bitmap, pixel_shader=color)
 group.append(bg_sprite)
