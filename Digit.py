@@ -17,21 +17,6 @@ class Digit:
     width = 63
     animSpeed = 0.03
 
-    # digitBits = bytes(
-    #     [
-    #         0xFC,  #   B11111100, // 0 ABCDEF--
-    #         0x60,  #   B01100000, // 1 -BC-----
-    #         0xDA,  #   B11011010, // 2 AB-DE-G-
-    #         0xF2,  #   B11110010, // 3 ABCD--G-
-    #         0x66,  #   B01100110, // 4 -BC--FG-
-    #         0xB6,  #   B10110110, // 5 A-CD-FG-
-    #         0xBE,  #   B10111110, // 6 A-CDEFG-
-    #         0xE0,  #   B11100000, // 7 ABC-----
-    #         0xFE,  #   B11111110, // 8 ABCDEFG-
-    #         0xF6,  #   B11110110, // 9 ABCD_FG-
-    #     ]
-    # )
-
     digitBits = [
         "11111100",  # 0 ABCDEF--
         "01100000",  # 1 -BC-----
@@ -184,3 +169,295 @@ class Digit:
             self.drawPixel(0, self.segHeight * 2 + 1 - i, self.color)  # // Draw as F
             self.drawPixel(1 + i, 0, self.black)  # // Erase D
             time.sleep(self.animSpeed)
+
+    def Morph5(self):
+        #   // FIVE
+        for i in range(self.segWidth):
+            self.drawPixel(self.segWidth + 1, self.segHeight + 2 + i, self.black)
+            # // Erase B
+            self.drawPixel(self.segWidth - i, self.segHeight * 2 + 2, self.color)
+            # // Draw as A
+            self.drawPixel(self.segWidth - i, 0, self.color)
+            # // Draw D
+            time.sleep(self.animSpeed)
+
+    def Morph6(self):
+        #   // SIX
+        for i in range(self.segWidth + 1):
+            # // Move C right to left
+            self.drawLine(
+                self.segWidth - i, 1, self.segWidth - i, self.segHeight, self.color
+            )
+            if i > 0:
+                self.drawLine(
+                    self.segWidth - i + 1,
+                    1,
+                    self.segWidth - i + 1,
+                    self.segHeight,
+                    self.black,
+                )
+            time.sleep(self.animSpeed)
+
+    def Morph7(self):
+        #   // SEVEN
+        for i in range(self.segWidth + 2):
+            # // Move E left to right
+            self.drawLine(0 + i - 1, 1, 0 + i - 1, self.segHeight, self.black)
+            self.drawLine(0 + i, 1, 0 + i, self.segHeight, self.color)
+
+            # // Move F left to right
+            self.drawLine(
+                0 + i - 1,
+                self.segHeight * 2 + 1,
+                0 + i - 1,
+                self.segHeight + 2,
+                self.black,
+            )
+            self.drawLine(
+                0 + i, self.segHeight * 2 + 1, 0 + i, self.segHeight + 2, self.color
+            )
+
+            # // Erase D and G gradually
+            self.drawPixel(1 + i, 0, self.black)  # // D
+            self.drawPixel(1 + i, self.segHeight + 1, self.black)  # // G
+            time.sleep(self.animSpeed)
+
+        def Morph8(self):
+            # // EIGHT
+            for i in range(self.segWidth + 1):
+                # // Move B right to left
+                self.drawLine(
+                    self.segWidth - i,
+                    self.segHeight * 2 + 1,
+                    self.segWidth - i,
+                    self.segHeight + 2,
+                    self.color,
+                )
+                if i > 0:
+                    self.drawLine(
+                        self.segWidth - i + 1,
+                        self.segHeight * 2 + 1,
+                        self.segWidth - i + 1,
+                        self.segHeight + 2,
+                        self.black,
+                    )
+
+                # // Move C right to left
+                self.drawLine(
+                    self.segWidth - i, 1, self.segWidth - i, self.segHeight, self.color
+                )
+                if i > 0:
+                    self.drawLine(
+                        self.segWidth - i + 1,
+                        1,
+                        self.segWidth - i + 1,
+                        self.segHeight,
+                        self.black,
+                    )
+
+                # // Gradually draw D and G
+                if i < self.segWidth:
+                    self.drawPixel(self.segWidth - i, 0, self.color)  # // D
+                    self.drawPixel(
+                        self.segWidth - i, self.segHeight + 1, self.color
+                    )  # // G
+
+                time.sleep(self.animSpeed)
+
+        def Morph9(self):
+            # // NINE
+            for i in range(self.segWidth + 2):
+                # // Move E left to right
+                self.drawLine(0 + i - 1, 1, 0 + i - 1, self.segHeight, self.black)
+                self.drawLine(0 + i, 1, 0 + i, self.segHeight, self.color)
+                time.sleep(self.animSpeed)
+
+        def Morph0(self):
+            # // ZERO
+            for i in range(self.segWidth + 1):
+                if self.value == 1:  # // If 1 to 0, slide B to F and E to C
+                    # // slide B to F
+                    self.drawLine(
+                        self.segWidth - i,
+                        self.segHeight * 2 + 1,
+                        self.segWidth - i,
+                        self.segHeight + 2,
+                        self.color,
+                    )
+                    if i > 0:
+                        self.drawLine(
+                            self.segWidth - i + 1,
+                            self.segHeight * 2 + 1,
+                            self.segWidth - i + 1,
+                            self.segHeight + 2,
+                            self.black,
+                        )
+
+                    # // slide E to C
+                    self.drawLine(
+                        self.segWidth - i,
+                        1,
+                        self.segWidth - i,
+                        self.segHeight,
+                        self.color,
+                    )
+                    if i > 0:
+                        self.drawLine(
+                            self.segWidth - i + 1,
+                            1,
+                            self.segWidth - i + 1,
+                            self.segHeight,
+                            self.black,
+                        )
+
+                    if i < self.segWidth:
+                        self.drawPixel(
+                            self.segWidth - i, self.segHeight * 2 + 2, self.color
+                        )  # // Draw A
+                    if i < self.segWidth:
+                        self.drawPixel(self.segWidth - i, 0, self.color)  # // Draw D
+
+                if self.value == 2:  # // If 2 to 0, slide B to F and Flow G to C
+                    # // slide B to F
+                    self.drawLine(
+                        self.segWidth - i,
+                        self.segHeight * 2 + 1,
+                        self.segWidth - i,
+                        self.segHeight + 2,
+                        self.color,
+                    )
+                    if i > 0:
+                        self.drawLine(
+                            self.segWidth - i + 1,
+                            self.segHeight * 2 + 1,
+                            self.segWidth - i + 1,
+                            self.segHeight + 2,
+                            self.black,
+                        )
+
+                    self.drawPixel(
+                        1 + i, self.segHeight + 1, self.black
+                    )  # // Erase G left to right
+                    if i < self.segWidth:
+                        self.drawPixel(
+                            self.segWidth + 1, self.segHeight + 1 - i, self.color
+                        )  # // Draw C
+
+                if self.value == 3:  # // B to F, C to E
+                    # // slide B to F
+                    self.drawLine(
+                        self.segWidth - i,
+                        self.segHeight * 2 + 1,
+                        self.segWidth - i,
+                        self.segHeight + 2,
+                        self.color,
+                    )
+                    if i > 0:
+                        self.drawLine(
+                            self.segWidth - i + 1,
+                            self.segHeight * 2 + 1,
+                            self.segWidth - i + 1,
+                            self.segHeight + 2,
+                            self.black,
+                        )
+
+                    # // Move C to E
+                    self.drawLine(
+                        self.segWidth - i,
+                        1,
+                        self.segWidth - i,
+                        self.segHeight,
+                        self.color,
+                    )
+                    if i > 0:
+                        self.drawLine(
+                            self.segWidth - i + 1,
+                            1,
+                            self.segWidth - i + 1,
+                            self.segHeight,
+                            self.black,
+                        )
+
+                    # // Erase G from right to left
+                    self.drawPixel(
+                        self.segWidth - i, self.segHeight + 1, self.black
+                    )  # // G
+
+                if self.value == 5:  # // If 5 to 0, we also need to slide F to B
+                    if i < self.segWidth:
+                        if i > 0:
+                            self.drawLine(
+                                1 + i,
+                                self.segHeight * 2 + 1,
+                                1 + i,
+                                self.segHeight + 2,
+                                self.black,
+                            )
+                        self.drawLine(
+                            2 + i,
+                            self.segHeight * 2 + 1,
+                            2 + i,
+                            self.segHeight + 2,
+                            self.color,
+                        )
+
+                if (
+                    self.value == 5 or self.value == 9
+                ):  #  // If 9 or 5 to 0, Flow G into E
+                    if i < self.segWidth:
+                        self.drawPixel(
+                            self.segWidth - i, self.segHeight + 1, self.black
+                        )
+                    if i < self.segWidth:
+                        self.drawPixel(0, self.segHeight - i, self.color)
+
+                time.sleep(self.animSpeed)
+
+        def Morph1(self):
+            # // Zero or two to One
+            for i in range(self.segWidth + 2):
+                # // Move E left to right
+                self.drawLine(0 + i - 1, 1, 0 + i - 1, self.segHeight, self.black)
+                self.drawLine(0 + i, 1, 0 + i, self.segHeight, self.color)
+
+                # // Move F left to right
+                self.drawLine(
+                    0 + i - 1,
+                    self.segHeight * 2 + 1,
+                    0 + i - 1,
+                    self.segHeight + 2,
+                    self.black,
+                )
+                self.drawLine(
+                    0 + i, self.segHeight * 2 + 1, 0 + i, self.segHeight + 2, self.color
+                )
+
+                # // Gradually Erase A, G, D
+                self.drawPixel(1 + i, self.segHeight * 2 + 2, self.black)  # // A
+                self.drawPixel(1 + i, 0, self.black)  # // D
+                self.drawPixel(1 + i, self.segHeight + 1, self.black)  # // G
+
+                time.sleep(self.animSpeed)
+
+        def Morph(self, newValue):
+            if newValue == 2:
+                self.Morph2()
+            elif newValue == 3:
+                self.Morph3()
+            elif newValue == 4:
+                self.Morph4()
+            elif newValue == 5:
+                self.Morph5()
+            elif newValue == 6:
+                self.Morph6()
+            elif newValue == 7:
+                self.Morph7()
+            elif newValue == 8:
+                self.Morph8()
+            elif newValue == 9:
+                self.Morph9()
+            elif newValue == 0:
+                self.Morph0()
+            elif newValue == 1:
+                self.Morph1()
+            self.value = newValue
