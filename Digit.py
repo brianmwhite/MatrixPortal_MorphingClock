@@ -37,6 +37,16 @@ class Digit:
         "11110110",  # 9 ABCD_FG-
     ]
 
+    #    -- A --
+    #   |       |
+    #   F       B
+    #   |       |
+    #    -- G --
+    #   |       |
+    #   E       C
+    #   |       |
+    #    -- D --
+
     black = 0
 
     def __init__(self, d, b, value, xo, yo, color):
