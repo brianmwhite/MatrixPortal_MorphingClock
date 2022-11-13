@@ -303,14 +303,18 @@ class Digit:
 
                 # // slide E to C
                 self.drawLine(
-                    self.segWidth - i, 1, self.segWidth - i, self.segHeight, self.color,
+                    self.segWidth - i,
+                    1,
+                    self.segWidth - i,
+                    self.segHeight + 2,
+                    self.color,
                 )
                 if i > 0:
                     self.drawLine(
                         self.segWidth - i + 1,
                         1,
                         self.segWidth - i + 1,
-                        self.segHeight,
+                        self.segHeight + 2,
                         self.black,
                     )
 
