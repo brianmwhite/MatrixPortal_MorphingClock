@@ -358,7 +358,7 @@ class Digit:
                 )  # // Erase G left to right
                 if i < self.segWidth:
                     self.drawPixel(
-                        self.segWidth + 1, self.segHeight + 1 - i, self.color
+                        self.segWidth + 1, self.segHeight - i, self.color
                     )  # // Draw C
 
             if self.value == 3:  # // B to F, C to E
@@ -381,14 +381,18 @@ class Digit:
 
                 # // Move C to E
                 self.drawLine(
-                    self.segWidth - i, 1, self.segWidth - i, self.segHeight, self.color,
+                    self.segWidth - i,
+                    1,
+                    self.segWidth - i,
+                    self.segHeight + 2,
+                    self.color,
                 )
                 if i > 0:
                     self.drawLine(
                         self.segWidth - i + 1,
                         1,
                         self.segWidth - i + 1,
-                        self.segHeight,
+                        self.segHeight + 2,
                         self.black,
                     )
 
@@ -396,6 +400,9 @@ class Digit:
                 self.drawPixel(
                     self.segWidth - i, self.segHeight + 1, self.black
                 )  # // G
+
+            if self.value == 4:  # // If 4 to 0, we also need to slide F to B
+                pass
 
             if self.value == 5:  # // If 5 to 0, we also need to slide F to B
                 if i < self.segWidth:
