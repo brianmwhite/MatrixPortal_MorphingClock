@@ -435,7 +435,7 @@ class Digit:
         for i in range(self.segWidth + 2):
             # // Move E left to right
             self.drawLine(0 + i - 1, 1, 0 + i - 1, self.segHeight + 2, self.black)
-            self.drawLine(0 + i, 1, 0 + i, self.segHeight, self.color)
+            self.drawLine(0 + i, 1, 0 + i, self.segHeight + 2, self.color)
 
             # // Move F left to right
             self.drawLine(
