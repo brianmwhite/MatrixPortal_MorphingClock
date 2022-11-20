@@ -402,7 +402,28 @@ class Digit:
                 )  # // G
 
             if self.value == 4:  # // If 4 to 0, we also need to slide F to B
-                pass
+                if i < self.segWidth:
+                    self.drawPixel(self.segWidth - i, self.segHeight + 1, self.black)
+                if i < self.segWidth:
+                    self.drawPixel(0, self.segHeight - i, self.color)
+
+                # if i < self.segWidth:
+                #     self.drawPixel(
+                #         self.segWidth - i, self.segHeight * 2 + 2, self.color
+                #     )
+                #     self.drawPixel(self.segWidth - i, self.segHeight + 1, self.color)
+                #     self.drawPixel(self.segWidth - i, 0, self.color)
+
+                # self.drawLine(
+                #     self.segWidth + 1 - i,
+                #     1,
+                #     self.segWidth + 1 - i,
+                #     self.segHeight + 2,
+                #     self.black,
+                # )
+                # self.drawLine(
+                #     self.segWidth - i, 1, self.segWidth - i, self.segHeight + 2, self.color
+                # )
 
             if self.value == 5:  # // If 5 to 0, we also need to slide F to B
                 if i < self.segWidth:
