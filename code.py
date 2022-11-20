@@ -9,12 +9,17 @@ import time
 import board
 import displayio
 
+import rtc
+import adafruit_ds3231
+
 from adafruit_matrixportal.network import Network
 from adafruit_matrixportal.matrix import Matrix
 
 from Digit import Digit
 
 displayio.release_displays()
+ds3231 = adafruit_ds3231.DS3231(board.I2C())
+rtc.set_time_source(ds3231)
 
 # --- Display setup ---
 matrix = Matrix()
@@ -51,7 +56,9 @@ digit3.DrawColon(color[1])
 
 def update_time():
     timeObject = time.localtime()
+    # timeObject = rtc.datetime
     epoch = time.mktime(timeObject)
+
     global prevEpoch
     global prevhh
     global prevmm
@@ -108,12 +115,12 @@ last_check = None
 while True:
     if last_check is None or time.monotonic() > last_check + 3600:
         try:
-            # update_time()
-            network.get_local_time()  # Synchronize Board's clock to Internet
+            timeObject = time.localtime()
+            if timeObject.tm_hour == 2 and timeObject.tm_min > 0:
+                network.get_local_time()  # Synchronize Board's clock to Internet
             last_check = time.monotonic()
         except RuntimeError as e:
             print("Some error occured, retrying! -", e)
 
     update_time()
     time.sleep(0.01)
-
