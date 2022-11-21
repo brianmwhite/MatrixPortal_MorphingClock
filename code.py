@@ -8,8 +8,10 @@
 import time
 import board
 import displayio
+import asyncio
 
 import rtc
+
 import adafruit_ds3231
 
 from adafruit_matrixportal.network import Network
@@ -54,73 +56,97 @@ digit1.DrawColon(color[1])
 digit3.DrawColon(color[1])
 
 
-def update_time():
-    timeObject = time.localtime()
-    # timeObject = rtc.datetime
-    epoch = time.mktime(timeObject)
+async def update_displayed_time():
+    while True:
+        timeObject = time.localtime()
+        # timeObject = rtc.datetime
+        epoch = time.mktime(timeObject)
 
-    global prevEpoch
-    global prevhh
-    global prevmm
-    global prevss
+        global prevEpoch
+        global prevhh
+        global prevmm
+        global prevss
 
-    if epoch != prevEpoch:
-        hh = timeObject.tm_hour
-        if hh > 12:
-            hh = hh - 12
-        mm = timeObject.tm_min
-        ss = timeObject.tm_sec
-        if (
-            prevEpoch == 0
-        ):  # // If we didn't have a previous time. Just draw it without morphing.
-            digit0.Draw(int(ss % 10))
-            digit1.Draw(int(ss / 10))
-            digit2.Draw(int(mm % 10))
-            digit3.Draw(int(mm / 10))
-            digit4.Draw(int(hh % 10))
-            digit5.Draw(int(hh / 10))
-        else:
-            if ss != prevss:
-                s0 = int(ss % 10)
-                s1 = int(ss / 10)
-                if s0 != digit0.Value():
-                    digit0.Morph(s0)
-                if s1 != digit1.Value():
-                    digit1.Morph(s1)
-                prevss = ss
+        if epoch != prevEpoch:
+            hh = timeObject.tm_hour
+            if hh > 12:
+                hh = hh - 12
+            mm = timeObject.tm_min
+            ss = timeObject.tm_sec
+            if (
+                prevEpoch == 0
+            ):  # // If we didn't have a previous time. Just draw it without morphing.
+                digit0.Draw(int(ss % 10))
+                digit1.Draw(int(ss / 10))
+                digit2.Draw(int(mm % 10))
+                digit3.Draw(int(mm / 10))
+                digit4.Draw(int(hh % 10))
+                digit5.Draw(int(hh / 10))
+            else:
+                if ss != prevss:
+                    s0 = int(ss % 10)
+                    s1 = int(ss / 10)
+                    if s0 != digit0.Value():
+                        digit0.Morph(s0)
+                    if s1 != digit1.Value():
+                        digit1.Morph(s1)
+                    prevss = ss
 
-            if mm != prevmm:
-                m0 = int(mm % 10)
-                m1 = int(mm / 10)
-                if m0 != digit2.Value():
-                    digit2.Morph(m0)
-                if m1 != digit3.Value():
-                    digit3.Morph(m1)
-                prevmm = mm
+                if mm != prevmm:
+                    m0 = int(mm % 10)
+                    m1 = int(mm / 10)
+                    if m0 != digit2.Value():
+                        digit2.Morph(m0)
+                    if m1 != digit3.Value():
+                        digit3.Morph(m1)
+                    prevmm = mm
 
-            if hh != prevhh:
-                h0 = int(hh % 10)
-                h1 = int(hh / 10)
-                if h0 != digit4.Value():
-                    digit4.Morph(h0)
-                if h1 != digit5.Value():
-                    digit5.Morph(h1)
-                prevhh = hh
+                if hh != prevhh:
+                    h0 = int(hh % 10)
+                    h1 = int(hh / 10)
+                    if h0 != digit4.Value():
+                        digit4.Morph(h0)
+                    if h1 != digit5.Value():
+                        digit5.Morph(h1)
+                    prevhh = hh
 
-        prevEpoch = epoch
+            prevEpoch = epoch
+        await asyncio.sleep(0.01)
 
 
-last_check = None
+async def sync_time_with_ntp():
+    # syncedToday = False
+    # last_synced_monotonic_time = 0
 
-while True:
-    if last_check is None or time.monotonic() > last_check + 3600:
-        try:
-            timeObject = time.localtime()
-            if timeObject.tm_hour == 2 and timeObject.tm_min > 0:
-                network.get_local_time()  # Synchronize Board's clock to Internet
-            last_check = time.monotonic()
-        except RuntimeError as e:
-            print("Some error occured, retrying! -", e)
+    # while True:
+    #     timeObject = time.localtime()
 
-    update_time()
-    time.sleep(0.01)
+    #     if time.monotonic() > last_synced_monotonic_time + 82800:
+    #         syncedToday = False
+
+    #     if not syncedToday and timeObject.tm_hour == 2 and timeObject.tm_min > 0:
+    #         print("time to sync. current time is:")
+    #         print(time.localtime())
+    #         print(ds3231.datetime)
+    #         try:
+    #             print(network.get_local_time())  # Synchronize Board's clock to Internet
+
+    #             syncedToday = True
+    #             last_synced_monotonic_time = time.monotonic()
+    #             print("synced time with network, new time is:")
+    #             print(time.localtime())
+    #             print(ds3231.datetime)
+    #         except RuntimeError as e:
+    #             print("Some error occured, retrying! -", e)
+    #     else:
+    #         await asyncio.sleep(300)
+    pass
+
+
+async def main():
+    update_display_task = asyncio.create_task(update_displayed_time())
+    sync_time_task = asyncio.create_task(sync_time_with_ntp())
+    await asyncio.gather(update_display_task, sync_time_task)
+
+
+asyncio.run(main())
