@@ -43,12 +43,12 @@ display.show(group)
 
 ##########################################################################
 
-digit0 = Digit(d=group, b=bitmap, value=0, xo=63 - 1 - 9 * 1, yo=8, color=1)
-digit1 = Digit(d=group, b=bitmap, value=0, xo=63 - 1 - 9 * 2, yo=8, color=1)
-digit2 = Digit(d=group, b=bitmap, value=0, xo=63 - 4 - 9 * 3, yo=8, color=1)
-digit3 = Digit(d=group, b=bitmap, value=0, xo=63 - 4 - 9 * 4, yo=8, color=1)
-digit4 = Digit(d=group, b=bitmap, value=0, xo=63 - 7 - 9 * 5, yo=8, color=1)
-digit5 = Digit(d=group, b=bitmap, value=0, xo=63 - 7 - 9 * 6, yo=8, color=1)
+digit0 = Digit(d=group, b=bitmap, value=0, xo=63 - 1 - 9 * 1, yo=32 - 15 - 3, color=1)
+digit1 = Digit(d=group, b=bitmap, value=0, xo=63 - 1 - 9 * 2, yo=32 - 15 - 3, color=1)
+digit2 = Digit(d=group, b=bitmap, value=0, xo=63 - 4 - 9 * 3, yo=32 - 15 - 3, color=1)
+digit3 = Digit(d=group, b=bitmap, value=0, xo=63 - 4 - 9 * 4, yo=32 - 15 - 3, color=1)
+digit4 = Digit(d=group, b=bitmap, value=0, xo=63 - 7 - 9 * 5, yo=32 - 15 - 3, color=1)
+digit5 = Digit(d=group, b=bitmap, value=0, xo=63 - 7 - 9 * 6, yo=32 - 15 - 3, color=1)
 
 digit1.DrawColon(color[1])
 digit3.DrawColon(color[1])
