@@ -6,20 +6,18 @@
 # SPDX-License-Identifier: MIT
 
 import time
-from adafruit_datetime import datetime
+
+import adafruit_ds3231
 import board
 import displayio
-
 import rtc
-import adafruit_ds3231
-
-from adafruit_matrixportal.network import Network
-from adafruit_matrixportal.matrix import Matrix
-from adafruit_matrixportal.graphics import Graphics
-
-from adafruit_bitmap_font import bitmap_font
-from adafruit_display_text import label
 import terminalio
+from adafruit_bitmap_font import bitmap_font
+from adafruit_datetime import datetime
+from adafruit_display_text import label
+from adafruit_matrixportal.graphics import Graphics
+from adafruit_matrixportal.matrix import Matrix
+from adafruit_matrixportal.network import Network
 
 from Digit import Digit
 
