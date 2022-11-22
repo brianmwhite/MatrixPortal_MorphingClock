@@ -21,6 +21,9 @@ from adafruit_matrixportal.network import Network
 
 from Digit import Digit
 
+DEBUG = False
+
+
 displayio.release_displays()
 ds3231 = adafruit_ds3231.DS3231(board.I2C())
 rtc.set_time_source(ds3231)
@@ -51,11 +54,15 @@ display.show(group)
 ##########################################################################
 
 date_text = ""
-date_font = terminalio.FONT
+
+if not DEBUG:
+    date_font = bitmap_font.load_font("/lemon.bdf")
+else:
+    date_font = terminalio.FONT
 
 date_text_area = label.Label(date_font, text=date_text, color=color[2])
-date_text_area.x = 2
-date_text_area.y = 25
+date_text_area.x = 6
+date_text_area.y = 21
 
 group.append(date_text_area)
 
