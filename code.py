@@ -6,6 +6,7 @@
 # SPDX-License-Identifier: MIT
 
 import time
+from adafruit_datetime import datetime
 import board
 import displayio
 
@@ -14,6 +15,11 @@ import adafruit_ds3231
 
 from adafruit_matrixportal.network import Network
 from adafruit_matrixportal.matrix import Matrix
+from adafruit_matrixportal.graphics import Graphics
+
+from adafruit_bitmap_font import bitmap_font
+from adafruit_display_text import label
+import terminalio
 
 from Digit import Digit
 
@@ -25,16 +31,19 @@ rtc.set_time_source(ds3231)
 matrix = Matrix()
 display = matrix.display
 network = Network(status_neopixel=board.NEOPIXEL, debug=False)
+
 prevEpoch = 0
+prevDate = None
 prevhh = 0
 prevmm = 0
 prevss = 0
 
 group = displayio.Group()  # Create a Group
 bitmap = displayio.Bitmap(64, 32, 2)  # Create a bitmap object,width, height, bit depth
-color = displayio.Palette(2)  # Create a color palette
+color = displayio.Palette(3)  # Create a color palette
 color[0] = 0x000000  # black background
 color[1] = 0x0000FF  # blue
+color[2] = 0x3F1651  # dark blue/purple
 
 # Make a background color fill
 bg_sprite = displayio.TileGrid(bitmap, pixel_shader=color)
@@ -42,6 +51,16 @@ group.append(bg_sprite)
 display.show(group)
 
 ##########################################################################
+
+date_text = ""
+date_font = terminalio.FONT
+
+date_text_area = label.Label(date_font, text=date_text, color=color[2])
+date_text_area.x = 2
+date_text_area.y = 25
+
+group.append(date_text_area)
+
 
 digit0 = Digit(d=group, b=bitmap, value=0, xo=63 - 1 - 9 * 1, yo=32 - 15 - 3, color=1)
 digit1 = Digit(d=group, b=bitmap, value=0, xo=63 - 1 - 9 * 2, yo=32 - 15 - 3, color=1)
@@ -56,9 +75,10 @@ digit3.DrawColon(color[1])
 
 def update_time():
     timeObject = time.localtime()
-    # timeObject = rtc.datetime
     epoch = time.mktime(timeObject)
+    currentDate = datetime.fromtimestamp(epoch)
 
+    global prevDate
     global prevEpoch
     global prevhh
     global prevmm
@@ -79,6 +99,8 @@ def update_time():
             digit3.Draw(int(mm / 10))
             digit4.Draw(int(hh % 10))
             digit5.Draw(int(hh / 10))
+
+            date_text_area.text = currentDate.ctime()[:10]
         else:
             if ss != prevss:
                 s0 = int(ss % 10)
@@ -107,7 +129,13 @@ def update_time():
                     digit5.Morph(h1)
                 prevhh = hh
 
+            if currentDate != prevDate:
+                print("changing date to")
+                print(currentDate)
+                date_text_area.text = currentDate.ctime()[:10]
+
         prevEpoch = epoch
+        prevDate = currentDate
 
 
 last_check = None
@@ -117,7 +145,8 @@ while True:
         try:
             timeObject = time.localtime()
             if timeObject.tm_hour == 2 and timeObject.tm_min > 0:
-                network.get_local_time()  # Synchronize Board's clock to Internet
+                pass
+                # network.get_local_time()  # Synchronize Board's clock to Internet
             last_check = time.monotonic()
         except RuntimeError as e:
             print("Some error occured, retrying! -", e)
