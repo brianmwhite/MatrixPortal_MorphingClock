@@ -8,6 +8,7 @@
 import time
 
 import adafruit_ds3231
+import adafruit_sht4x
 import board
 import displayio
 import rtc
@@ -27,6 +28,8 @@ DEBUG = False
 displayio.release_displays()
 ds3231 = adafruit_ds3231.DS3231(board.I2C())
 rtc.set_time_source(ds3231)
+
+temp_sensor = adafruit_sht4x.SHT4x(board.I2C())
 
 # --- Display setup ---
 matrix = Matrix()
@@ -63,6 +66,10 @@ date_text_area.x = 6
 date_text_area.y = 21
 group.append(date_text_area)
 
+temp_text_area = label.Label(font, text="", color=color[2])
+temp_text_area.x = 11
+temp_text_area.y = 28
+group.append(temp_text_area)
 
 digit0 = Digit(d=group, b=bitmap, value=0, xo=63 - 1 - 9 * 1, yo=32 - 15 - 3, color=1)
 digit1 = Digit(d=group, b=bitmap, value=0, xo=63 - 1 - 9 * 2, yo=32 - 15 - 3, color=1)
@@ -131,8 +138,13 @@ def update_time():
                     digit5.Morph(h1)
                 prevhh = hh
 
-            if currentDate != prevDate:
+            if (
+                currentDate.month != prevDate.month
+                or currentDate.day != prevDate.day
+                or currentDate.year != prevDate.year
+            ):
                 print("changing date to")
+                print(prevDate)
                 print(currentDate)
                 date_text_area.text = currentDate.ctime()[:10]
 
@@ -141,8 +153,28 @@ def update_time():
 
 
 last_check = None
+last_temp_check = None
+
+
+def convert_to_fahrenheit(celsius):
+    fahrenheit = (celsius * 1.8) + 32
+    return fahrenheit
+
 
 while True:
+    if last_temp_check is None or time.monotonic() > last_temp_check + 60:
+        currentTempInCelsius = temp_sensor.temperature
+        currentHumidity = temp_sensor.relative_humidity
+        currentTempInFahrenheit = convert_to_fahrenheit(currentTempInCelsius)
+
+        temp_text_area.text = "%d°  %d%%" % (
+            round(currentTempInFahrenheit),
+            round(currentHumidity),
+        )
+
+        print("latest temperature is:")
+        print(currentTempInFahrenheit)
+        last_temp_check = time.monotonic()
     if last_check is None or time.monotonic() > last_check + 3600:
         try:
             timeObject = time.localtime()
