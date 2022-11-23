@@ -95,8 +95,8 @@ def update_time():
 
     if epoch != prevEpoch:
         hh = timeObject.tm_hour
-        if hh > 12:
-            hh = hh - 12
+        # if hh > 12:
+        #     hh = hh - 12
         mm = timeObject.tm_min
         ss = timeObject.tm_sec
         if (
