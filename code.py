@@ -53,14 +53,12 @@ display.show(group)
 
 ##########################################################################
 
-date_text = ""
-
 if not DEBUG:
     date_font = bitmap_font.load_font("/lemon.bdf")
 else:
     date_font = terminalio.FONT
 
-date_text_area = label.Label(date_font, text=date_text, color=color[2])
+date_text_area = label.Label(date_font, text="", color=color[2])
 date_text_area.x = 6
 date_text_area.y = 21
 
