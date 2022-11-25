@@ -10,3 +10,6 @@ From the original:
 The initial port/fork of that project to CircuitPython is [brianmwhite / HariFun_166_Morphing_Clock](https://github.com/brianmwhite/HariFun_166_Morphing_Clock)
 
 Lemon bitmap font from [cmvnd / fonts](https://github.com/cmvnd/fonts)
+
+![Project Image of the Matrix Portal](matrixportal-resized.jpg)
+
