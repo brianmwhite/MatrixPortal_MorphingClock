@@ -143,9 +143,12 @@ def update_time():
                 or currentDate.day != prevDate.day
                 or currentDate.year != prevDate.year
             ):
-                print("changing date to")
-                print(prevDate)
-                print(currentDate)
+                print(
+                    "changing date to "
+                    + format_datetime(prevDate)
+                    + " from "
+                    + format_datetime(currentDate)
+                )
                 date_text_area.text = currentDate.ctime()[:10]
 
         prevEpoch = epoch
@@ -154,6 +157,17 @@ def update_time():
 
 last_check = None
 last_temp_check = None
+
+# from https://github.com/adafruit/circuitpython/issues/3364#issuecomment-1218371982
+def format_datetime(datetime):
+    return "{:02}/{:02}/{} {:02}:{:02}:{:02}".format(
+        datetime.tm_mon,
+        datetime.tm_mday,
+        datetime.tm_year,
+        datetime.tm_hour,
+        datetime.tm_min,
+        datetime.tm_sec,
+    )
 
 
 def convert_to_fahrenheit(celsius):
@@ -171,9 +185,8 @@ while True:
             round(currentTempInFahrenheit),
             round(currentHumidity),
         )
+        print("latest temperature is: " + str(currentTempInFahrenheit))
 
-        print("latest temperature is:")
-        print(currentTempInFahrenheit)
         last_temp_check = time.monotonic()
     if last_check is None or time.monotonic() > last_check + 3600:
         try:
