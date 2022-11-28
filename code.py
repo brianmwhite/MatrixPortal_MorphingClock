@@ -47,14 +47,31 @@ prevss = 0
 group = displayio.Group()  # Create a Group
 bitmap = displayio.Bitmap(64, 32, 2)  # Create a bitmap object,width, height, bit depth
 color = displayio.Palette(3)  # Create a color palette
-color[0] = 0x000000  # black background
-color[1] = 0x0000FF  # blue
-color[2] = 0x3F1651  # dark blue/purple
+# color[0] = 0x000000  # black background
+# color[1] = 0x0000FF  # blue
+# color[2] = 0x3F1651  # dark blue/purple
 
 # Make a background color fill
 bg_sprite = displayio.TileGrid(bitmap, pixel_shader=color)
 group.append(bg_sprite)
 display.show(group)
+
+
+def set_color_blue():
+    global color
+    color[0] = 0x000000  # black background
+    color[1] = 0x0000FF  # blue
+    color[2] = 0x3F1651  # dark blue/purple
+
+
+def set_color_red():
+    global color
+    color[0] = 0x000000  # black background
+    color[1] = 0x590000  # red
+    color[2] = 0x590000  # red
+
+
+set_color_blue()
 
 ##########################################################################
 
@@ -189,6 +206,14 @@ while True:
         )
         print("latest temperature is: " + str(currentTempInFahrenheit))
         print("photosensor = " + str(photocell.value))
+
+        # if photocell.value < 1000:
+        #     set_color_red()
+        #     temp_text_area.color = color[2]
+        #     date_text_area.color = color[2]
+
+        # else:
+        #     set_color_blue()
 
         last_temp_check = time.monotonic()
     if last_check is None or time.monotonic() > last_check + 3600:
