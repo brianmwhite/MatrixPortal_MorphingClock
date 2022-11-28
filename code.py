@@ -9,6 +9,7 @@ import time
 
 import adafruit_ds3231
 import adafruit_sht4x
+import analogio
 import board
 import displayio
 import rtc
@@ -30,6 +31,7 @@ ds3231 = adafruit_ds3231.DS3231(board.I2C())
 rtc.set_time_source(ds3231)
 
 temp_sensor = adafruit_sht4x.SHT4x(board.I2C())
+photocell = analogio.AnalogIn(board.A0)
 
 # --- Display setup ---
 matrix = Matrix()
@@ -176,7 +178,7 @@ def convert_to_fahrenheit(celsius):
 
 
 while True:
-    if last_temp_check is None or time.monotonic() > last_temp_check + 60:
+    if last_temp_check is None or time.monotonic() > last_temp_check + 5:
         currentTempInCelsius = temp_sensor.temperature
         currentHumidity = temp_sensor.relative_humidity
         currentTempInFahrenheit = convert_to_fahrenheit(currentTempInCelsius)
@@ -186,6 +188,7 @@ while True:
             round(currentHumidity),
         )
         print("latest temperature is: " + str(currentTempInFahrenheit))
+        print("photosensor = " + str(photocell.value))
 
         last_temp_check = time.monotonic()
     if last_check is None or time.monotonic() > last_check + 3600:
