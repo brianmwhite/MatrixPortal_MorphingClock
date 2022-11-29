@@ -86,7 +86,7 @@ class Digit:
     def DrawColon(self, c):
         #   // Colon is drawn to the left of this digit
         x = -3
-        y = self.segHeight - 1
+        y = self.segHeight - 2
 
         self.bitmap[self.xOffset + x, self.height - (y + self.yOffset)] = c
         self.bitmap[self.xOffset + x + 1, self.height - (y + self.yOffset)] = c
@@ -94,7 +94,7 @@ class Digit:
         self.bitmap[self.xOffset + x + 1, self.height - (y + self.yOffset) - 1] = c
 
         x = -3
-        y = self.segHeight + 1 + 3
+        y = self.segHeight + 3
         self.bitmap[self.xOffset + x, self.height - (y + self.yOffset)] = c
         self.bitmap[self.xOffset + x + 1, self.height - (y + self.yOffset)] = c
         self.bitmap[self.xOffset + x, self.height - (y + self.yOffset) - 1] = c
