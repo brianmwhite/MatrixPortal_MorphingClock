@@ -83,23 +83,22 @@ class Digit:
             for point in range(x, x2 + 1, step):
                 self.bitmap[point, y] = c
 
-    def drawFillRect(self, x, y, w, h, c):
-        self.display.append(
-            Rect(
-                self.xOffset + x,
-                self.height - (y + self.yOffset),
-                w,
-                h,
-                fill=c,
-                stroke=0,
-            )
-        )
-
     def DrawColon(self, c):
         #   // Colon is drawn to the left of this digit
-        self.drawFillRect(-3, self.segHeight - 1, 2, 2, c)
-        self.drawFillRect(-3, self.segHeight + 1 + 3, 2, 2, c)
-        pass
+        x = -3
+        y = self.segHeight - 1
+
+        self.bitmap[self.xOffset + x, self.height - (y + self.yOffset)] = c
+        self.bitmap[self.xOffset + x + 1, self.height - (y + self.yOffset)] = c
+        self.bitmap[self.xOffset + x, self.height - (y + self.yOffset) - 1] = c
+        self.bitmap[self.xOffset + x + 1, self.height - (y + self.yOffset) - 1] = c
+
+        x = -3
+        y = self.segHeight + 1 + 3
+        self.bitmap[self.xOffset + x, self.height - (y + self.yOffset)] = c
+        self.bitmap[self.xOffset + x + 1, self.height - (y + self.yOffset)] = c
+        self.bitmap[self.xOffset + x, self.height - (y + self.yOffset) - 1] = c
+        self.bitmap[self.xOffset + x + 1, self.height - (y + self.yOffset) - 1] = c
 
     def drawSeg(self, seg):
         if seg == self.sA:
