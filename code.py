@@ -34,7 +34,7 @@ temp_sensor = adafruit_sht4x.SHT4x(board.I2C())
 photocell = analogio.AnalogIn(board.A0)
 
 # --- Display setup ---
-matrix = Matrix()
+matrix = Matrix(bit_depth=4)
 display = matrix.display
 network = Network(status_neopixel=board.NEOPIXEL, debug=False)
 
@@ -45,7 +45,7 @@ prevmm = 0
 prevss = 0
 
 group = displayio.Group()  # Create a Group
-bitmap = displayio.Bitmap(64, 32, 2)  # Create a bitmap object,width, height, bit depth
+bitmap = displayio.Bitmap(64, 32, 3)  # Create a bitmap object,width, height, bit depth
 color = displayio.Palette(3)  # Create a color palette
 # color[0] = 0x000000  # black background
 # color[1] = 0x0000FF  # blue
@@ -57,21 +57,22 @@ group.append(bg_sprite)
 display.show(group)
 
 
-def set_color_blue():
+def set_color_bright():
     global color
     color[0] = 0x000000  # black background
     color[1] = 0x0000FF  # blue
-    color[2] = 0x3F1651  # dark blue/purple
+    color[2] = 0x0000C66  # dark blue/purple
 
 
-def set_color_red():
+def set_color_dark():
     global color
     color[0] = 0x000000  # black background
-    color[1] = 0x590000  # red
-    color[2] = 0x590000  # red
+    color[1] = 0x2E0000  # red
+    # color[2] = 0x5E0900  # red
+    color[2] = 0x2E0000  # red
 
 
-set_color_blue()
+set_color_bright()
 
 ##########################################################################
 
@@ -97,8 +98,8 @@ digit3 = Digit(d=group, b=bitmap, value=0, xo=63 - 4 - 9 * 4, yo=32 - 15 - 2, co
 digit4 = Digit(d=group, b=bitmap, value=0, xo=63 - 7 - 9 * 5, yo=32 - 15 - 2, color=1)
 digit5 = Digit(d=group, b=bitmap, value=0, xo=63 - 7 - 9 * 6, yo=32 - 15 - 2, color=1)
 
-digit1.DrawColon(color[1])
-digit3.DrawColon(color[1])
+digit1.DrawColon(1)
+digit3.DrawColon(1)
 
 
 def update_time():
@@ -182,13 +183,13 @@ def format_datetime(datetime_object: datetime):
     return datetime_object.isoformat()[:10]
 
 
-def convert_to_fahrenheit(celsius):
+def convert_to_fahrenheit(celsius: float):
     fahrenheit = (celsius * 1.8) + 32
     return fahrenheit
 
 
 while True:
-    if last_temp_check is None or time.monotonic() > last_temp_check + 5:
+    if last_temp_check is None or time.monotonic() > last_temp_check + 1:
         currentTempInCelsius = temp_sensor.temperature
         currentHumidity = temp_sensor.relative_humidity
         currentTempInFahrenheit = convert_to_fahrenheit(currentTempInCelsius)
@@ -200,13 +201,13 @@ while True:
         print("latest temperature is: " + str(currentTempInFahrenheit))
         print("photosensor = " + str(photocell.value))
 
-        # if photocell.value < 1000:
-        #     set_color_red()
-        #     temp_text_area.color = color[2]
-        #     date_text_area.color = color[2]
+        if photocell.value < 600:
+            set_color_dark()
+        else:
+            set_color_bright()
 
-        # else:
-        #     set_color_blue()
+        temp_text_area.color = color[2]
+        date_text_area.color = color[2]
 
         last_temp_check = time.monotonic()
     if last_check is None or time.monotonic() > last_check + 3600:
@@ -217,7 +218,7 @@ while True:
                 # network.get_local_time()  # Synchronize Board's clock to Internet
             last_check = time.monotonic()
         except RuntimeError as e:
-            print("Some error occured, retrying! -", e)
+            print("Some error occured, retrying! - ", e)
 
     update_time()
     time.sleep(0.01)
