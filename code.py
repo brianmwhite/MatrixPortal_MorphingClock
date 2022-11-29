@@ -177,16 +177,9 @@ def update_time():
 last_check = None
 last_temp_check = None
 
-# from https://github.com/adafruit/circuitpython/issues/3364#issuecomment-1218371982
-def format_datetime(datetime):
-    return "{:02}/{:02}/{} {:02}:{:02}:{:02}".format(
-        datetime.tm_mon,
-        datetime.tm_mday,
-        datetime.tm_year,
-        datetime.tm_hour,
-        datetime.tm_min,
-        datetime.tm_sec,
-    )
+
+def format_datetime(datetime_object: datetime):
+    return datetime_object.isoformat()[:10]
 
 
 def convert_to_fahrenheit(celsius):
