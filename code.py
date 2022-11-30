@@ -67,9 +67,8 @@ def set_color_bright():
 def set_color_dark():
     global color
     color[0] = 0x000000  # black background
-    color[1] = 0x2E0000  # red
-    # color[2] = 0x5E0900  # red
-    color[2] = 0x2E0000  # red
+    color[1] = 0x4C0000  # red
+    color[2] = 0x4C0000  # red
 
 
 set_color_bright()
