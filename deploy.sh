@@ -1,3 +1,3 @@
 #!/bin/bash
 
-rsync ./*.py /Volumes/CIRCUITPY -iu
+rsync ./*.{py,bdf} /Volumes/CIRCUITPY -iu
