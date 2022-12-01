@@ -1,7 +1,8 @@
 # digit morphing code ported from https://www.instructables.com/Morphing-Digital-Clock/
 # https://github.com/hwiguna/HariFun_166_Morphing_Clock
 
-# some code started from https://github.com/adafruit/Adafruit_Learning_System_Guides/blob/main/Metro_Matrix_Clock/code.py
+# some code started from
+# https://github.com/adafruit/Adafruit_Learning_System_Guides/blob/main/Metro_Matrix_Clock/code.py
 # SPDX-FileCopyrightText: 2020 John Park for Adafruit Industries
 # SPDX-License-Identifier: MIT
 
@@ -17,7 +18,6 @@ import terminalio
 from adafruit_bitmap_font import bitmap_font
 from adafruit_datetime import datetime
 from adafruit_display_text import label
-from adafruit_matrixportal.graphics import Graphics
 from adafruit_matrixportal.matrix import Matrix
 from adafruit_matrixportal.network import Network
 
