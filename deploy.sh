@@ -1,3 +1,3 @@
 #!/bin/bash
 
-rsync ./*.{py,bdf} /Volumes/CIRCUITPY -iu
+rsync ./*.{py,bdf} /Volumes/MPM4_CLOCK -iu
