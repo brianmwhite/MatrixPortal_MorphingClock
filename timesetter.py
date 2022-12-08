@@ -4,7 +4,7 @@ import adafruit_ds3231
 import board
 from adafruit_matrixportal.network import Network
 
-network = Network(status_neopixel=board.NEOPIXEL, debug=False)
+network = Network(status_neopixel=board.NEOPIXEL, debug=False)  # type: ignore
 ds3231 = adafruit_ds3231.DS3231(board.I2C())
 
 
