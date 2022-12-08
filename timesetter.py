@@ -7,6 +7,9 @@ from adafruit_matrixportal.network import Network
 network = Network(status_neopixel=board.NEOPIXEL, debug=False)  # type: ignore
 ds3231 = adafruit_ds3231.DS3231(board.I2C())
 
+TIME_SERVICE_FORMAT = "%Y-%m-%d %H:%M:%S.%L %j %u %z %Z"
+LOCATION = "America/New_York"
+
 
 def looptime():
     while True:
@@ -21,6 +24,36 @@ def printtime():
             now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec,
         )
     )
+
+
+def synctime():
+    # NOTE: time is set but with a couple second delay
+    # modified from adafruit_portalbase.network
+    # SPDX-FileCopyrightText: 2017 Scott Shawcroft, written for Adafruit Industries
+    # SPDX-FileCopyrightText: Copyright (c)
+    #   2020 Melissa LeBlanc-Williams for Adafruit Industries
+    # SPDX-License-Identifier: MIT
+
+    time_reply = network.get_strftime(TIME_SERVICE_FORMAT, LOCATION)
+    print(time_reply)
+    if time_reply:
+        times = time_reply.split(" ")
+        the_date = times[0]
+        the_time = times[1]
+        # year_day = int(times[2])
+        # week_day = int(times[3])
+        # is_dst = None  # no way to know yet
+        year, month, mday = [int(x) for x in the_date.split("-")]
+        the_time = the_time.split(".")[0]
+        hours, minutes, seconds = [int(x) for x in the_time.split(":")]
+        # now = time.struct_time(
+        #     (year, month, mday, hours, minutes, seconds, week_day, year_day, is_dst)
+        # )
+        # print(now)
+        ds3231.datetime = time.struct_time(
+            (year, month, mday, hours, minutes, seconds, 0, -1, -1)
+        )
+        looptime()
 
 
 def settime(hour: int, min: int, sec: int):
