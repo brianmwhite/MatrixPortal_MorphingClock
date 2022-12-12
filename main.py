@@ -24,7 +24,7 @@ from adafruit_matrixportal.network import Network
 from Digit import Digit
 
 DEBUG = False
-
+PHOTOCELL_THRESHOLD = 450
 
 displayio.release_displays()
 ds3231 = adafruit_ds3231.DS3231(board.I2C())
@@ -200,7 +200,7 @@ while True:
         print("latest temperature is: " + str(currentTempInFahrenheit))
         print("photosensor = " + str(photocell.value))
 
-        if photocell.value < 600:
+        if photocell.value < PHOTOCELL_THRESHOLD:
             set_color_dark()
         else:
             set_color_bright()
