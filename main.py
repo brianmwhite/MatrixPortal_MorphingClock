@@ -9,6 +9,8 @@
 import time
 
 import adafruit_ds3231
+import adafruit_esp32spi.adafruit_esp32spi_socket as socket
+import adafruit_minimqtt.adafruit_minimqtt as MQTT
 import adafruit_sht4x
 import analogio
 import board
@@ -26,6 +28,13 @@ from Digit import Digit
 DEBUG = False
 PHOTOCELL_THRESHOLD = 450
 
+try:
+    from secrets import secrets
+except ImportError:
+    print("WiFi secrets are kept in secrets.py, please add them there!")
+    raise
+
+
 displayio.release_displays()
 ds3231 = adafruit_ds3231.DS3231(board.I2C())
 rtc.set_time_source(ds3231)
@@ -37,6 +46,7 @@ photocell = analogio.AnalogIn(board.A0)
 matrix = Matrix(bit_depth=4)
 display = matrix.display
 network = Network(status_neopixel=board.NEOPIXEL, debug=False)
+network.connect()
 
 prevEpoch = 0
 prevDate = None
@@ -55,6 +65,16 @@ color = displayio.Palette(3)  # Create a color palette
 bg_sprite = displayio.TileGrid(bitmap, pixel_shader=color)
 group.append(bg_sprite)
 display.show(group)
+
+mqtt = MQTT.MQTT(
+    broker=secrets["mqtt_broker"],
+    username=secrets["mqtt_username"],
+    password=secrets["mqtt_password"],
+    port=secrets["mqtt_port"],
+    client_id="office_morphing_clock",
+)
+
+MQTT.set_socket(socket, network._wifi.esp)
 
 
 def set_color_bright():
@@ -174,7 +194,6 @@ def update_time():
         prevDate = currentDate
 
 
-last_check = None
 last_temp_check = None
 
 
@@ -187,11 +206,36 @@ def convert_to_fahrenheit(celsius: float):
     return fahrenheit
 
 
+def subscribe():
+    try:
+        mqtt.is_connected()
+    except MQTT.MMQTTException:
+        mqtt.connect()
+        mqtt.subscribe(secrets["mqtt_topic"])
+
+
+subscribe()
+
 while True:
     if last_temp_check is None or time.monotonic() > last_temp_check + 1:
         currentTempInCelsius = temp_sensor.temperature
         currentHumidity = temp_sensor.relative_humidity
         currentTempInFahrenheit = convert_to_fahrenheit(currentTempInCelsius)
+
+        try:
+            mqtt.is_connected()
+            mqtt.publish(
+                secrets["mqtt_topic"],
+                '{"temperature": %d,"humidity": %d,"photosensor": %d}'
+                % (
+                    round(currentTempInFahrenheit),
+                    round(currentHumidity),
+                    round(photocell.value),
+                ),
+            )
+        except (MQTT.MMQTTException, RuntimeError):
+            network.connect()
+            mqtt.reconnect()
 
         temp_text_area.text = "%d°  %d%%" % (
             round(currentTempInFahrenheit),
@@ -209,15 +253,6 @@ while True:
         date_text_area.color = color[2]
 
         last_temp_check = time.monotonic()
-    if last_check is None or time.monotonic() > last_check + 3600:
-        try:
-            timeObject = time.localtime()
-            if timeObject.tm_hour == 2 and timeObject.tm_min > 0:
-                pass
-                # network.get_local_time()  # Synchronize Board's clock to Internet
-            last_check = time.monotonic()
-        except RuntimeError as e:
-            print("Some error occured, retrying! - ", e)
 
     update_time()
     time.sleep(0.01)
