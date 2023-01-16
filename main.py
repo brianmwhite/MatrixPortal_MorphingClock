@@ -27,7 +27,8 @@ from Digit import Digit
 
 DEBUG = False
 PHOTOCELL_THRESHOLD = 450
-
+BRIGHTNESS_INTERVAL_SECONDS = 1
+TEMPERATURE_INTERVAL_SECONDS = 60
 try:
     from secrets import secrets
 except ImportError:
@@ -53,6 +54,10 @@ prevDate = None
 prevhh = 0
 prevmm = 0
 prevss = 0
+
+last_temp_check = None
+last_brightness_check = None
+
 
 group = displayio.Group()  # Create a Group
 bitmap = displayio.Bitmap(64, 32, 3)  # Create a bitmap object,width, height, bit depth
@@ -194,9 +199,6 @@ def update_time():
         prevDate = currentDate
 
 
-last_temp_check = None
-
-
 def format_datetime(datetime_object: datetime):
     return datetime_object.isoformat()[:10]
 
@@ -212,12 +214,26 @@ def subscribe():
     except MQTT.MMQTTException:
         mqtt.connect()
         mqtt.subscribe(secrets["mqtt_topic"])
+        pass
 
 
 subscribe()
 
 while True:
-    if last_temp_check is None or time.monotonic() > last_temp_check + 1:
+    if (
+        last_brightness_check is None
+        or time.monotonic() > last_brightness_check + BRIGHTNESS_INTERVAL_SECONDS
+    ):
+        if photocell.value < PHOTOCELL_THRESHOLD:
+            set_color_dark()
+        else:
+            set_color_bright()
+        last_brightness_check = time.monotonic()
+
+    if (
+        last_temp_check is None
+        or time.monotonic() > last_temp_check + TEMPERATURE_INTERVAL_SECONDS
+    ):
         currentTempInCelsius = temp_sensor.temperature
         currentHumidity = temp_sensor.relative_humidity
         currentTempInFahrenheit = convert_to_fahrenheit(currentTempInCelsius)
@@ -236,6 +252,7 @@ while True:
         except (MQTT.MMQTTException, RuntimeError):
             network.connect()
             mqtt.reconnect()
+            pass
 
         temp_text_area.text = "%d°  %d%%" % (
             round(currentTempInFahrenheit),
@@ -243,11 +260,6 @@ while True:
         )
         print("latest temperature is: " + str(currentTempInFahrenheit))
         print("photosensor = " + str(photocell.value))
-
-        if photocell.value < PHOTOCELL_THRESHOLD:
-            set_color_dark()
-        else:
-            set_color_bright()
 
         temp_text_area.color = color[2]
         date_text_area.color = color[2]
