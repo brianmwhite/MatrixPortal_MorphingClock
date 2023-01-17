@@ -230,6 +230,9 @@ while True:
             set_color_bright()
         last_brightness_check = time.monotonic()
 
+    temp_text_area.color = color[2]
+    date_text_area.color = color[2]
+
     if (
         last_temp_check is None
         or time.monotonic() > last_temp_check + TEMPERATURE_INTERVAL_SECONDS
@@ -260,9 +263,6 @@ while True:
         )
         print("latest temperature is: " + str(currentTempInFahrenheit))
         print("photosensor = " + str(photocell.value))
-
-        temp_text_area.color = color[2]
-        date_text_area.color = color[2]
 
         last_temp_check = time.monotonic()
 
