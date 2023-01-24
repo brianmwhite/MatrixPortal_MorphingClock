@@ -252,17 +252,35 @@ while True:
                     round(photocell.value),
                 ),
             )
-        except (MQTT.MMQTTException, RuntimeError):
-            network.connect()
-            mqtt.reconnect()
+        except (MQTT.MMQTTException, RuntimeError, ConnectionError) as error:
+            time.sleep(5)
+
+            print("MQTT connection issue: %", error)
+            try:
+                network.connect()
+                mqtt.reconnect()
+            except (MQTT.MMQTTException, RuntimeError, ConnectionError) as error:
+                print("MQTT RE-connection issue: %", error)
+                pass
+
             pass
 
         temp_text_area.text = "%d°  %d%%" % (
             round(currentTempInFahrenheit),
             round(currentHumidity),
         )
-        print("latest temperature is: " + str(currentTempInFahrenheit))
-        print("photosensor = " + str(photocell.value))
+
+        nowtime = time.localtime()
+        printedtime = "%02d:%02d:%02d" % (
+            nowtime.tm_hour,
+            nowtime.tm_min,
+            nowtime.tm_sec,
+        )
+
+        print(
+            "time=%s | temp= %d | humidity=%d | photocell=%d"
+            % (printedtime, currentTempInFahrenheit, currentHumidity, photocell.value),
+        )
 
         last_temp_check = time.monotonic()
 
