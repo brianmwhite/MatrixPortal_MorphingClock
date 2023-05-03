@@ -4,12 +4,14 @@ import adafruit_ds3231
 import board
 from adafruit_matrixportal.network import Network
 
+
 network = Network(status_neopixel=board.NEOPIXEL, debug=False)  # type: ignore
 ds3231 = adafruit_ds3231.DS3231(board.I2C())
 
 TIME_SERVICE_FORMAT = "%Y-%m-%d %H:%M:%S.%L %j %u %z %Z"
 LOCATION = "America/New_York"
 
+network.connect()
 
 def looptime():
     while True:
@@ -26,7 +28,24 @@ def printtime():
     )
 
 
-def synctime():
+def synctime(print_time=True):
+    # call a local api to get the latest time as a json object, parse it into a struct_time and set the RTC
+    JSON_URL = "http://192.168.7.97:5015/time"
+    response = network._wifi.requests.get(JSON_URL, timeout=10)
+    json = response.json()
+    time_as_struct = time.struct_time((json["year"]
+                                        , json["month"]
+                                        , json["day"]
+                                        , json["hour"]
+                                        , json["minute"]
+                                        , json["second"] + 1
+                                        , 0, -1, -1))
+    ds3231.datetime = time_as_struct
+    if print_time:
+        looptime()
+
+
+def synctimeaio(print_time=True):
     # NOTE: time is set but with a couple second delay
     # modified from adafruit_portalbase.network
     # SPDX-FileCopyrightText: 2017 Scott Shawcroft, written for Adafruit Industries
@@ -53,7 +72,8 @@ def synctime():
         ds3231.datetime = time.struct_time(
             (year, month, mday, hours, minutes, seconds, 0, -1, -1)
         )
-        looptime()
+        if print_time:
+            looptime()
 
 
 def settime(hour: int, min: int, sec: int):
@@ -76,4 +96,5 @@ def setdatetime(year: int, month: int, day: int, hour: int, min: int, sec: int):
     looptime()
 
 
-printtime()
+if __name__ == "__main__":
+    printtime()
