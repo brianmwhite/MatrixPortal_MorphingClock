@@ -107,20 +107,20 @@ else:
 
 date_text_area = label.Label(font, text="", color=color[2])
 date_text_area.x = 6
-date_text_area.y = 20
+date_text_area.y = 19
 group.append(date_text_area)
 
 temp_text_area = label.Label(font, text="", color=color[2])
 temp_text_area.x = 11
-temp_text_area.y = 27
+temp_text_area.y = 28
 group.append(temp_text_area)
 
-digit0 = Digit(d=group, b=bitmap, value=0, xo=63 - 1 - 9 * 1, yo=32 - 15 - 2, color=1)
-digit1 = Digit(d=group, b=bitmap, value=0, xo=63 - 1 - 9 * 2, yo=32 - 15 - 2, color=1)
-digit2 = Digit(d=group, b=bitmap, value=0, xo=63 - 4 - 9 * 3, yo=32 - 15 - 2, color=1)
-digit3 = Digit(d=group, b=bitmap, value=0, xo=63 - 4 - 9 * 4, yo=32 - 15 - 2, color=1)
-digit4 = Digit(d=group, b=bitmap, value=0, xo=63 - 7 - 9 * 5, yo=32 - 15 - 2, color=1)
-digit5 = Digit(d=group, b=bitmap, value=0, xo=63 - 7 - 9 * 6, yo=32 - 15 - 2, color=1)
+digit0 = Digit(d=group, b=bitmap, value=0, xo=63 - 1 - 9 * 1, yo=32 - 15 - 1, color=1)
+digit1 = Digit(d=group, b=bitmap, value=0, xo=63 - 1 - 9 * 2, yo=32 - 15 - 1, color=1)
+digit2 = Digit(d=group, b=bitmap, value=0, xo=63 - 4 - 9 * 3, yo=32 - 15 - 1, color=1)
+digit3 = Digit(d=group, b=bitmap, value=0, xo=63 - 4 - 9 * 4, yo=32 - 15 - 1, color=1)
+digit4 = Digit(d=group, b=bitmap, value=0, xo=63 - 7 - 9 * 5, yo=32 - 15 - 1, color=1)
+digit5 = Digit(d=group, b=bitmap, value=0, xo=63 - 7 - 9 * 6, yo=32 - 15 - 1, color=1)
 
 digit1.DrawColon(1)
 digit3.DrawColon(1)
