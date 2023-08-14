@@ -58,6 +58,8 @@ prevss = 0
 last_temp_check = None
 last_brightness_check = None
 
+DARKEST_COLOR = 0x110000
+BRIGHTEST_COLOR = 0x0000FF
 
 group = displayio.Group()  # Create a Group
 bitmap = displayio.Bitmap(64, 32, 3)  # Create a bitmap object,width, height, bit depth
@@ -85,15 +87,16 @@ MQTT.set_socket(socket, network._wifi.esp)
 def set_color_bright():
     global color
     color[0] = 0x000000  # black background
-    color[1] = 0x0000FF  # blue
-    color[2] = 0x0000C66  # dark blue/purple
+    color[1] = BRIGHTEST_COLOR
+    color[2] = BRIGHTEST_COLOR
 
 
 def set_color_dark():
     global color
     color[0] = 0x000000  # black background
-    color[1] = 0x4C0000  # red
-    color[2] = 0x4C0000  # red
+    color[1] = DARKEST_COLOR
+    color[2] = DARKEST_COLOR
+    
 
 
 set_color_bright()
