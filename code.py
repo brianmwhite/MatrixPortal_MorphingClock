@@ -58,8 +58,49 @@ prevss = 0
 last_temp_check = None
 last_brightness_check = None
 
-DARKEST_COLOR = 0x110000
-BRIGHTEST_COLOR = 0x0000FF
+# DARKEST_COLOR = 255
+# BRIGHTEST_COLOR = 16711680
+DARKEST_COLOR = 255
+BRIGHTEST_COLOR = 16711680
+
+
+PHOTOCELL_MAX_VALUE = 5000
+PHOTOCELL_MIN_VALUE = 0
+
+GRADIENT_PALETTE = [
+    1812, 1558, 1560, 1563, 1565, 1567, 1570, 1572, 1575, 1577, 1579, 1582, 1584, 
+    1587, 1589, 1335, 1338, 1340, 1342, 1345, 1347, 1350, 1352, 1354, 1357, 1359, 
+    1362, 1364, 1366, 1113, 1115, 1117, 1120, 1122, 1125, 1127, 1129, 1132, 1134, 
+    1137, 1139, 1141, 1144, 890, 892, 895, 897, 900, 902, 904, 907, 909, 911, 914, 
+    916, 919, 921, 667, 670, 672, 675, 677, 679, 682, 684, 686, 689, 691, 694, 696, 
+    698, 445, 447, 450, 452, 454, 457, 459, 461, 464, 466, 469, 471, 473, 476, 222, 
+    225, 227, 229, 232, 234, 236, 239, 241, 244, 246, 248, 251, 253, 255
+]
+
+def calculate_color_based_on_photocell_value(photocell_value: int):
+    # given the photocell range from PHOTOCELL_MIN_VALUE to PHOTOCELL_MAX_VALUE
+    # calculate the color based on the gradient palette
+    # position 0 in the gradient should correspond to the photocell max value
+    # the last value in the gradient should correspond to the photocell min value
+    # the gradient palette is stored in the variable GRADIENT_PALETTE and is
+    # currently 100 values long but could be longer or shorter
+    # there will always be at least 2 values in the gradient palette
+
+# round the photocell value to the nearest ten so the values will all be whole numbers that are evenly divisible by 10
+    photocell_value = round(photocell_value, -1)
+
+    percent = photocell_value / (PHOTOCELL_MAX_VALUE - PHOTOCELL_MIN_VALUE)
+    position = round(percent * len(GRADIENT_PALETTE))
+    
+    if position > len(GRADIENT_PALETTE):
+        position = len(GRADIENT_PALETTE) - 1
+    elif position < 0:
+        position = 0
+    else:
+        position = position - 1
+    
+    return GRADIENT_PALETTE[position]
+    
 
 group = displayio.Group()  # Create a Group
 bitmap = displayio.Bitmap(64, 32, 3)  # Create a bitmap object,width, height, bit depth
@@ -227,11 +268,14 @@ while True:
         last_brightness_check is None
         or time.monotonic() > last_brightness_check + BRIGHTNESS_INTERVAL_SECONDS
     ):
-        if photocell.value < PHOTOCELL_THRESHOLD:
-            set_color_dark()
-        else:
-            set_color_bright()
+        
+        color[0] = 0x000000  # black background
+        color[1] = calculate_color_based_on_photocell_value(photocell.value)
+        color[2] = color[1]
+        # print("color value=%d" % color[1])
+
         last_brightness_check = time.monotonic()
+
 
     temp_text_area.color = color[2]
     date_text_area.color = color[2]
