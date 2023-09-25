@@ -87,19 +87,23 @@ def calculate_color_based_on_photocell_value(photocell_value: int):
     # there will always be at least 2 values in the gradient palette
 
 # round the photocell value to the nearest ten so the values will all be whole numbers that are evenly divisible by 10
-    photocell_value = round(photocell_value, -1)
+    # photocell_value = round(photocell_value, -1)
 
-    percent = photocell_value / (PHOTOCELL_MAX_VALUE - PHOTOCELL_MIN_VALUE)
-    position = round(percent * len(GRADIENT_PALETTE))
+    # percent = photocell_value / (PHOTOCELL_MAX_VALUE - PHOTOCELL_MIN_VALUE)
+    # position = round(percent * len(GRADIENT_PALETTE))
     
-    if position > len(GRADIENT_PALETTE):
-        position = len(GRADIENT_PALETTE) - 1
-    elif position < 0:
-        position = 0
-    else:
-        position = position - 1
+    # if position > len(GRADIENT_PALETTE):
+    #     position = len(GRADIENT_PALETTE) - 1
+    # elif position < 0:
+    #     position = 0
+    # else:
+    #     position = position - 1
+    color = GRADIENT_PALETTE[-1]
+
+    if photocell_value < 500:
+        color = GRADIENT_PALETTE[0]
     
-    return GRADIENT_PALETTE[position]
+    return color
     
 
 group = displayio.Group()  # Create a Group
@@ -271,6 +275,7 @@ while True:
         
         color[0] = 0x000000  # black background
         color[1] = calculate_color_based_on_photocell_value(photocell.value)
+        # color[1] = GRADIENT_PALETTE[-1]
         color[2] = color[1]
         # print("color value=%d" % color[1])
 
