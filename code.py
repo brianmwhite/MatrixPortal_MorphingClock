@@ -8,20 +8,20 @@
 
 import time
 
-import adafruit_ds3231
-import adafruit_esp32spi.adafruit_esp32spi_socket as socket
-import adafruit_minimqtt.adafruit_minimqtt as MQTT
-import adafruit_sht4x
-import analogio
-import board
-import displayio
-import rtc
-import terminalio
-from adafruit_bitmap_font import bitmap_font
-from adafruit_datetime import datetime
-from adafruit_display_text import label
-from adafruit_matrixportal.matrix import Matrix
-from adafruit_matrixportal.network import Network
+import adafruit_ds3231 # type: ignore
+import adafruit_esp32spi.adafruit_esp32spi_socket as socket # type: ignore
+import adafruit_minimqtt.adafruit_minimqtt as MQTT # type: ignore
+import adafruit_sht4x # type: ignore
+import analogio # type: ignore
+import board # type: ignore
+import displayio # type: ignore
+import rtc # type: ignore
+import terminalio # type: ignore
+from adafruit_bitmap_font import bitmap_font # type: ignore
+from adafruit_datetime import datetime # type: ignore
+from adafruit_display_text import label # type: ignore
+from adafruit_matrixportal.matrix import Matrix # type: ignore
+from adafruit_matrixportal.network import Network # type: ignore
 
 from Digit import Digit
 
@@ -47,7 +47,20 @@ photocell = analogio.AnalogIn(board.A0)
 matrix = Matrix(bit_depth=4)
 display = matrix.display
 network = Network(status_neopixel=board.NEOPIXEL, debug=False)
-network.connect()
+
+# Network connection state
+network_connected = False
+last_connection_attempt = None
+CONNECTION_RETRY_INTERVAL_SECONDS = 30
+
+# Try initial connection, but don't crash if it fails
+try:
+    network.connect()
+    network_connected = True
+    print("Network connected successfully")
+except Exception as error:
+    print(f"Initial network connection failed: {error}")
+    network_connected = False
 
 prevEpoch = 0
 prevDate = None
@@ -126,7 +139,13 @@ mqtt = MQTT.MQTT(
     client_id="office_morphing_clock",
 )
 
-MQTT.set_socket(socket, network._wifi.esp)
+# Only set socket if network is connected
+if network_connected:
+    try:
+        MQTT.set_socket(socket, network._wifi.esp)
+    except Exception as error:
+        print(f"Failed to set MQTT socket: {error}")
+        network_connected = False
 
 
 def set_color_bright():
@@ -257,17 +276,55 @@ def convert_to_fahrenheit(celsius: float):
 
 
 def subscribe():
+    global network_connected
+    if not network_connected:
+        return False
+    
     try:
-        mqtt.is_connected()
-    except MQTT.MMQTTException:
-        mqtt.connect()
-        mqtt.subscribe(secrets["mqtt_topic"])
-        pass
+        if not mqtt.is_connected():
+            mqtt.connect()
+            mqtt.subscribe(secrets["mqtt_topic"])
+        return True
+    except (MQTT.MMQTTException, RuntimeError, ConnectionError) as error:
+        print(f"MQTT subscribe failed: {error}")
+        network_connected = False
+        return False
 
 
-subscribe()
+def try_reconnect():
+    global network_connected, last_connection_attempt
+    
+    current_time = time.monotonic()
+    if (last_connection_attempt is not None and 
+        current_time < last_connection_attempt + CONNECTION_RETRY_INTERVAL_SECONDS):
+        return False
+    
+    last_connection_attempt = current_time
+    print("Attempting to reconnect to network...")
+    
+    try:
+        network.connect()
+        MQTT.set_socket(socket, network._wifi.esp)
+        if subscribe():
+            network_connected = True
+            print("Reconnected successfully!")
+            return True
+    except Exception as error:
+        print(f"Reconnection failed: {error}")
+    
+    network_connected = False
+    return False
+
+
+# Try initial MQTT connection, but don't crash if it fails
+if network_connected:
+    subscribe()
 
 while True:
+    # Try to reconnect if network is down
+    if not network_connected:
+        try_reconnect()
+    
     if (
         last_brightness_check is None
         or time.monotonic() > last_brightness_check + BRIGHTNESS_INTERVAL_SECONDS
@@ -293,29 +350,27 @@ while True:
         currentHumidity = temp_sensor.relative_humidity
         currentTempInFahrenheit = convert_to_fahrenheit(currentTempInCelsius)
 
-        try:
-            mqtt.is_connected()
-            mqtt.publish(
-                secrets["mqtt_topic"],
-                '{"temperature": %d,"humidity": %d,"photosensor": %d}'
-                % (
-                    round(currentTempInFahrenheit),
-                    round(currentHumidity),
-                    round(photocell.value),
-                ),
-            )
-        except (MQTT.MMQTTException, RuntimeError, ConnectionError) as error:
-            time.sleep(5)
-
-            print("MQTT connection issue: %", error)
+        # Only try MQTT if network is connected
+        if network_connected:
             try:
-                network.connect()
-                mqtt.reconnect()
+                if not mqtt.is_connected():
+                    mqtt.connect()
+                    mqtt.subscribe(secrets["mqtt_topic"])
+                
+                mqtt.publish(
+                    secrets["mqtt_topic"],
+                    '{"temperature": %d,"humidity": %d,"photosensor": %d}'
+                    % (
+                        round(currentTempInFahrenheit),
+                        round(currentHumidity),
+                        round(photocell.value),
+                    ),
+                )
             except (MQTT.MMQTTException, RuntimeError, ConnectionError) as error:
-                print("MQTT RE-connection issue: %", error)
-                pass
-
-            pass
+                print(f"MQTT connection issue: {error}")
+                network_connected = False
+        else:
+            print("Network not connected - skipping MQTT publish")
 
         temp_text_area.text = "%d°  %d%%" % (
             round(currentTempInFahrenheit),
@@ -329,9 +384,10 @@ while True:
             nowtime.tm_sec,
         )
 
+        connection_status = "connected" if network_connected else "disconnected"
         print(
-            "time=%s | temp= %d | humidity=%d | photocell=%d"
-            % (printedtime, currentTempInFahrenheit, currentHumidity, photocell.value),
+            "time=%s | temp= %d | humidity=%d | photocell=%d | network=%s"
+            % (printedtime, currentTempInFahrenheit, currentHumidity, photocell.value, connection_status),
         )
 
         last_temp_check = time.monotonic()
