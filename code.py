@@ -7,6 +7,7 @@
 # SPDX-License-Identifier: MIT
 
 import time
+import gc  # Garbage collector for memory management
 
 import adafruit_ds3231 # type: ignore
 import adafruit_esp32spi.adafruit_esp32spi_socket as socket # type: ignore
@@ -24,6 +25,14 @@ from adafruit_matrixportal.matrix import Matrix # type: ignore
 from adafruit_matrixportal.network import Network # type: ignore
 
 from Digit import Digit
+
+def print_memory_info():
+    """Print current memory usage information"""
+    try:
+        gc.collect()
+        print(f"Memory: {gc.mem_free()} bytes free, {gc.mem_alloc()} bytes allocated")
+    except Exception as e:
+        print(f"Could not get memory info: {e}")
 
 DEBUG = False
 PHOTOCELL_THRESHOLD = 450
@@ -53,14 +62,32 @@ network_connected = False
 last_connection_attempt = None
 CONNECTION_RETRY_INTERVAL_SECONDS = 30
 
-# Try initial connection, but don't crash if it fails
-try:
-    network.connect()
-    network_connected = True
-    print("Network connected successfully")
-except Exception as error:
-    print(f"Initial network connection failed: {error}")
-    network_connected = False
+# Give WiFi subsystem time to initialize before first connection attempt
+print("Initializing WiFi subsystem...")
+gc.collect()  # Clean up memory before network operations
+print_memory_info()  # Print memory status
+time.sleep(2)  # Wait 2 seconds for WiFi to be ready
+
+# Try initial connection with retry logic
+max_initial_retries = 3
+initial_retry_delay = 1  # Start with 1 second delay
+
+for attempt in range(max_initial_retries):
+    try:
+        print(f"Initial connection attempt {attempt + 1}/{max_initial_retries}...")
+        network.connect()
+        network_connected = True
+        print("Network connected successfully")
+        break
+    except Exception as error:
+        print(f"Initial network connection attempt {attempt + 1} failed: {error}")
+        if attempt < max_initial_retries - 1:  # Don't sleep on the last attempt
+            print(f"Retrying in {initial_retry_delay} seconds...")
+            time.sleep(initial_retry_delay)
+            initial_retry_delay *= 2  # Exponential backoff
+        else:
+            print("All initial connection attempts failed")
+            network_connected = False
 
 prevEpoch = 0
 prevDate = None
@@ -130,6 +157,7 @@ color = displayio.Palette(3)  # Create a color palette
 bg_sprite = displayio.TileGrid(bitmap, pixel_shader=color)
 group.append(bg_sprite)
 display.show(group)
+gc.collect()  # Clean up memory after display setup
 
 mqtt = MQTT.MQTT(
     broker=secrets["mqtt_broker"],
@@ -167,9 +195,16 @@ set_color_bright()
 
 ##########################################################################
 
-if not DEBUG:
+# Use built-in font to avoid memory issues with large BDF file
+try:
+    # Try to load the custom font if memory allows
     font = bitmap_font.load_font("/lemon.bdf")
-else:
+    print("Loaded custom font successfully")
+except MemoryError:
+    print("Memory error loading custom font, using built-in font")
+    font = terminalio.FONT
+except Exception as e:
+    print(f"Error loading custom font: {e}, using built-in font")
     font = terminalio.FONT
 
 date_text_area = label.Label(font, text="", color=color[2])
