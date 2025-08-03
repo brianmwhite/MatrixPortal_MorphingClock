@@ -278,15 +278,46 @@ def convert_to_fahrenheit(celsius: float):
 def subscribe():
     global network_connected
     if not network_connected:
+        print("Network not connected, skipping MQTT subscribe")
         return False
     
     try:
         if not mqtt.is_connected():
-            mqtt.connect()
-            mqtt.subscribe(secrets["mqtt_topic"])
+            print("Initial MQTT connection attempt...")
+            try:
+                mqtt.connect()
+                print("Initial MQTT connection successful")
+            except Exception as connect_error:
+                print(f"Initial MQTT connection failed: {connect_error}")
+                print(f"Connection error type: {type(connect_error).__name__}")
+                raise connect_error
+            
+            try:
+                mqtt.subscribe(secrets["mqtt_topic"])
+                print(f"Initial MQTT subscription to {secrets['mqtt_topic']} successful")
+            except Exception as subscribe_error:
+                print(f"Initial MQTT subscription failed: {subscribe_error}")
+                print(f"Subscription error type: {type(subscribe_error).__name__}")
+                raise subscribe_error
         return True
-    except (MQTT.MMQTTException, RuntimeError, ConnectionError) as error:
-        print(f"MQTT subscribe failed: {error}")
+    except MQTT.MMQTTException as mqtt_error:
+        print(f"Initial MQTT specific error: {mqtt_error}")
+        print(f"MQTT error type: {type(mqtt_error).__name__}")
+        network_connected = False
+        return False
+    except RuntimeError as runtime_error:
+        print(f"Initial Runtime error: {runtime_error}")
+        print(f"Runtime error type: {type(runtime_error).__name__}")
+        network_connected = False
+        return False
+    except ConnectionError as conn_error:
+        print(f"Initial Connection error: {conn_error}")
+        print(f"Connection error type: {type(conn_error).__name__}")
+        network_connected = False
+        return False
+    except Exception as general_error:
+        print(f"Initial unexpected error: {general_error}")
+        print(f"Error type: {type(general_error).__name__}")
         network_connected = False
         return False
 
@@ -303,14 +334,24 @@ def try_reconnect():
     print("Attempting to reconnect to network...")
     
     try:
+        print("Reconnecting to WiFi network...")
         network.connect()
+        print("WiFi reconnection successful")
+        
+        print("Setting up MQTT socket...")
         MQTT.set_socket(socket, network._wifi.esp)
+        print("MQTT socket setup successful")
+        
         if subscribe():
             network_connected = True
-            print("Reconnected successfully!")
+            print("Full reconnection successful!")
             return True
+        else:
+            print("MQTT subscription failed during reconnection")
+            return False
     except Exception as error:
         print(f"Reconnection failed: {error}")
+        print(f"Reconnection error type: {type(error).__name__}")
     
     network_connected = False
     return False
@@ -354,20 +395,49 @@ while True:
         if network_connected:
             try:
                 if not mqtt.is_connected():
-                    mqtt.connect()
-                    mqtt.subscribe(secrets["mqtt_topic"])
+                    print("MQTT not connected, attempting to connect...")
+                    try:
+                        mqtt.connect()
+                        print("MQTT connected successfully")
+                    except Exception as connect_error:
+                        print(f"MQTT connection failed: {connect_error}")
+                        print(f"Connection error type: {type(connect_error).__name__}")
+                        raise connect_error
+                    
+                    try:
+                        mqtt.subscribe(secrets["mqtt_topic"])
+                        print(f"MQTT subscribed to topic: {secrets['mqtt_topic']}")
+                    except Exception as subscribe_error:
+                        print(f"MQTT subscription failed: {subscribe_error}")
+                        print(f"Subscription error type: {type(subscribe_error).__name__}")
+                        raise subscribe_error
                 
-                mqtt.publish(
-                    secrets["mqtt_topic"],
-                    '{"temperature": %d,"humidity": %d,"photosensor": %d}'
-                    % (
-                        round(currentTempInFahrenheit),
-                        round(currentHumidity),
-                        round(photocell.value),
-                    ),
+                # Prepare the message
+                message = '{"temperature": %d,"humidity": %d,"photosensor": %d}' % (
+                    round(currentTempInFahrenheit),
+                    round(currentHumidity),
+                    round(photocell.value),
                 )
-            except (MQTT.MMQTTException, RuntimeError, ConnectionError) as error:
-                print(f"MQTT connection issue: {error}")
+                print(f"Attempting to publish message: {message}")
+                
+                mqtt.publish(secrets["mqtt_topic"], message)
+                print("MQTT message published successfully")
+                
+            except MQTT.MMQTTException as mqtt_error:
+                print(f"MQTT specific error: {mqtt_error}")
+                print(f"MQTT error type: {type(mqtt_error).__name__}")
+                network_connected = False
+            except RuntimeError as runtime_error:
+                print(f"Runtime error during MQTT operation: {runtime_error}")
+                print(f"Runtime error type: {type(runtime_error).__name__}")
+                network_connected = False
+            except ConnectionError as conn_error:
+                print(f"Connection error during MQTT operation: {conn_error}")
+                print(f"Connection error type: {type(conn_error).__name__}")
+                network_connected = False
+            except Exception as general_error:
+                print(f"Unexpected error during MQTT operation: {general_error}")
+                print(f"Error type: {type(general_error).__name__}")
                 network_connected = False
         else:
             print("Network not connected - skipping MQTT publish")
