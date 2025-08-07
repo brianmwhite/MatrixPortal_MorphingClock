@@ -9,6 +9,26 @@
 import time
 import gc  # Garbage collector for memory management
 
+# If it still crashes (unlikely but possible):
+# 1. Compile Digit.py into a .mpy (saves RAM during import).
+# 2. Or, as a last resort, add import supervisor; supervisor.reload() at the very start of the file to force a clean heap on every auto-reload.
+
+# Utility function to display memory usage at various stages
+def print_memory_info(stage: str = ""):
+    """Print current memory usage information with an optional stage label"""
+    try:
+        gc.collect()
+        if stage:
+            print(f"[{stage}] Memory free: {gc.mem_free()} bytes, allocated: {gc.mem_alloc()} bytes")
+        else:
+            print(f"Memory free: {gc.mem_free()} bytes, allocated: {gc.mem_alloc()} bytes")
+    except Exception as e:
+        print(f"Could not get memory info: {e}")
+
+print_memory_info("Before importing Digit")
+from Digit import Digit
+print_memory_info("After importing Digit")
+
 import adafruit_ds3231 # type: ignore
 import adafruit_esp32spi.adafruit_esp32spi_socket as socket # type: ignore
 import adafruit_minimqtt.adafruit_minimqtt as MQTT # type: ignore
@@ -24,15 +44,6 @@ from adafruit_display_text import label # type: ignore
 from adafruit_matrixportal.matrix import Matrix # type: ignore
 from adafruit_matrixportal.network import Network # type: ignore
 
-from Digit import Digit
-
-def print_memory_info():
-    """Print current memory usage information"""
-    try:
-        gc.collect()
-        print(f"Memory: {gc.mem_free()} bytes free, {gc.mem_alloc()} bytes allocated")
-    except Exception as e:
-        print(f"Could not get memory info: {e}")
 
 DEBUG = False
 PHOTOCELL_THRESHOLD = 450
