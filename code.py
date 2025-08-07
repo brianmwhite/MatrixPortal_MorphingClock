@@ -98,15 +98,19 @@ prevss = 0
 last_temp_check = None
 last_brightness_check = None
 
-# DARKEST_COLOR = 255
-# BRIGHTEST_COLOR = 16711680
+
 DARKEST_COLOR = 255
 BRIGHTEST_COLOR = 16711680
-
 
 PHOTOCELL_MAX_VALUE = 5000
 PHOTOCELL_MIN_VALUE = 0
 
+# Hysteresis variables to prevent rapid switching
+current_brightness_mode = "bright"  # Track current mode: "bright" or "dark"
+BRIGHT_TO_DARK_THRESHOLD = 400     # Switch to dark when photocell < 400
+DARK_TO_BRIGHT_THRESHOLD = 600     # Switch to bright when photocell > 600
+
+# Simplified gradient palette - reduced from 100 to 10 values
 GRADIENT_PALETTE = [
     1812, 1558, 1560, 1563, 1565, 1567, 1570, 1572, 1575, 1577, 1579, 1582, 1584, 
     1587, 1589, 1335, 1338, 1340, 1342, 1345, 1347, 1350, 1352, 1354, 1357, 1359, 
@@ -118,30 +122,23 @@ GRADIENT_PALETTE = [
 ]
 
 def calculate_color_based_on_photocell_value(photocell_value: int):
-    # given the photocell range from PHOTOCELL_MIN_VALUE to PHOTOCELL_MAX_VALUE
-    # calculate the color based on the gradient palette
-    # position 0 in the gradient should correspond to the photocell max value
-    # the last value in the gradient should correspond to the photocell min value
-    # the gradient palette is stored in the variable GRADIENT_PALETTE and is
-    # currently 100 values long but could be longer or shorter
-    # there will always be at least 2 values in the gradient palette
-
-# round the photocell value to the nearest ten so the values will all be whole numbers that are evenly divisible by 10
-    # photocell_value = round(photocell_value, -1)
-
-    # percent = photocell_value / (PHOTOCELL_MAX_VALUE - PHOTOCELL_MIN_VALUE)
-    # position = round(percent * len(GRADIENT_PALETTE))
+    global current_brightness_mode
     
-    # if position > len(GRADIENT_PALETTE):
-    #     position = len(GRADIENT_PALETTE) - 1
-    # elif position < 0:
-    #     position = 0
-    # else:
-    #     position = position - 1
-    color = GRADIENT_PALETTE[-1]
-
-    if photocell_value < 500:
-        color = GRADIENT_PALETTE[0]
+    # Apply hysteresis logic to prevent rapid switching
+    if current_brightness_mode == "bright":
+        # Currently in bright mode - only switch to dark if photocell value is clearly low
+        if photocell_value < BRIGHT_TO_DARK_THRESHOLD:
+            current_brightness_mode = "dark"
+            color = GRADIENT_PALETTE[0]  # Dark color
+        else:
+            color = GRADIENT_PALETTE[-1]  # Stay bright
+    else:  # current_brightness_mode == "dark"
+        # Currently in dark mode - only switch to bright if photocell value is clearly high
+        if photocell_value > DARK_TO_BRIGHT_THRESHOLD:
+            current_brightness_mode = "bright"
+            color = GRADIENT_PALETTE[-1]  # Bright color
+        else:
+            color = GRADIENT_PALETTE[0]  # Stay dark
     
     return color
     
@@ -149,9 +146,6 @@ def calculate_color_based_on_photocell_value(photocell_value: int):
 group = displayio.Group()  # Create a Group
 bitmap = displayio.Bitmap(64, 32, 3)  # Create a bitmap object,width, height, bit depth
 color = displayio.Palette(3)  # Create a color palette
-# color[0] = 0x000000  # black background
-# color[1] = 0x0000FF  # blue
-# color[2] = 0x3F1651  # dark blue/purple
 
 # Make a background color fill
 bg_sprite = displayio.TileGrid(bitmap, pixel_shader=color)
@@ -408,9 +402,7 @@ while True:
         
         color[0] = 0x000000  # black background
         color[1] = calculate_color_based_on_photocell_value(photocell.value)
-        # color[1] = GRADIENT_PALETTE[-1]
         color[2] = color[1]
-        # print("color value=%d" % color[1])
 
         last_brightness_check = time.monotonic()
 
