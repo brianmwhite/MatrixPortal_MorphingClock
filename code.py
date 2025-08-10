@@ -64,6 +64,8 @@ temp_sensor = adafruit_sht4x.SHT4x(board.I2C())
 photocell = analogio.AnalogIn(board.A0)
 
 # --- Display setup ---
+gc.collect()
+print_memory_info("Before Matrix setup")
 matrix = Matrix(bit_depth=4)
 display = matrix.display
 network = Network(status_neopixel=board.NEOPIXEL, debug=False)
@@ -232,6 +234,14 @@ digit5 = Digit(d=group, b=bitmap, value=0, xo=63 - 7 - 9 * 6, yo=32 - 15 - 1, co
 digit1.DrawColon(1)
 digit3.DrawColon(1)
 
+# Draw the initial time once so digits appear immediately (definition is below)
+
+
+# ---------------------------------------------------------------------------
+# Helper functions (time update, MQTT subscribe, reconnect, etc.) that were
+# accidentally removed in a previous edit. These are required for the program
+# to run correctly.
+# ---------------------------------------------------------------------------
 
 def update_time():
     timeObject = time.localtime()
@@ -250,9 +260,8 @@ def update_time():
         #     hh = hh - 12
         mm = timeObject.tm_min
         ss = timeObject.tm_sec
-        if (
-            prevEpoch == 0
-        ):  # // If we didn't have a previous time. Just draw it without morphing.
+
+        if prevEpoch == 0:  # If we didn't have a previous time. Just draw it.
             digit0.Draw(int(ss % 10))
             digit1.Draw(int(ss / 10))
             digit2.Draw(int(mm % 10))
@@ -311,8 +320,7 @@ def format_datetime(datetime_object: datetime):
 
 
 def convert_to_fahrenheit(celsius: float):
-    fahrenheit = (celsius * 1.8) + 32
-    return fahrenheit
+    return (celsius * 1.8) + 32
 
 
 def subscribe():
@@ -320,7 +328,7 @@ def subscribe():
     if not network_connected:
         print("Network not connected, skipping MQTT subscribe")
         return False
-    
+
     try:
         if not mqtt.is_connected():
             print("Initial MQTT connection attempt...")
@@ -331,7 +339,7 @@ def subscribe():
                 print(f"Initial MQTT connection failed: {connect_error}")
                 print(f"Connection error type: {type(connect_error).__name__}")
                 raise connect_error
-            
+
             try:
                 mqtt.subscribe(secrets["mqtt_topic"])
                 print(f"Initial MQTT subscription to {secrets['mqtt_topic']} successful")
@@ -364,27 +372,30 @@ def subscribe():
 
 def try_reconnect():
     global network_connected, last_connection_attempt
-    
+
     current_time = time.monotonic()
-    if (last_connection_attempt is not None and 
-        current_time < last_connection_attempt + CONNECTION_RETRY_INTERVAL_SECONDS):
+    if (
+        last_connection_attempt is not None
+        and current_time < last_connection_attempt + CONNECTION_RETRY_INTERVAL_SECONDS
+    ):
         return False
-    
+
     last_connection_attempt = current_time
     print("Attempting to reconnect to network...")
-    
+
     try:
         print("Reconnecting to WiFi network...")
         network.connect()
         print("WiFi reconnection successful")
+
         # Mark WiFi as connected before attempting MQTT subscribe so that subscribe()
         # doesn't bail out early thinking the network is down.
         network_connected = True
-        
+
         print("Setting up MQTT socket...")
         MQTT.set_socket(socket, network._wifi.esp)
         print("MQTT socket setup successful")
-        
+
         if subscribe():
             network_connected = True
             print("Full reconnection successful!")
@@ -395,15 +406,16 @@ def try_reconnect():
     except Exception as error:
         print(f"Reconnection failed: {error}")
         print(f"Reconnection error type: {type(error).__name__}")
-    
+
     network_connected = False
     return False
 
 
-# Try initial MQTT connection, but don't crash if it fails
-if network_connected:
-    subscribe()
+# Perform an initial draw now that update_time exists
+update_time()
 
+
+# Start main loop
 while True:
     # Try to reconnect if network is down
     if not network_connected:
@@ -502,6 +514,14 @@ while True:
         )
 
         last_temp_check = time.monotonic()
+
+    if network_connected and mqtt.is_connected():
+        try:
+            mqtt.loop()  # Maintain the MQTT connection (handles keep-alive pings)
+        except Exception as loop_error:
+            print(f"MQTT loop error: {loop_error}")
+            print(f"MQTT loop error type: {type(loop_error).__name__}")
+            network_connected = False
 
     update_time()
     time.sleep(0.01)
