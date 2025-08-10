@@ -377,6 +377,9 @@ def try_reconnect():
         print("Reconnecting to WiFi network...")
         network.connect()
         print("WiFi reconnection successful")
+        # Mark WiFi as connected before attempting MQTT subscribe so that subscribe()
+        # doesn't bail out early thinking the network is down.
+        network_connected = True
         
         print("Setting up MQTT socket...")
         MQTT.set_socket(socket, network._wifi.esp)
