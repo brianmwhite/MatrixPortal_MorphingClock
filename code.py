@@ -49,6 +49,10 @@ DEBUG = False
 PHOTOCELL_THRESHOLD = 450
 BRIGHTNESS_INTERVAL_SECONDS = 1
 TEMPERATURE_INTERVAL_SECONDS = 60
+MQTT_RETRY_INTERVAL_SECONDS = 120  # Retry MQTT less frequently
+NETWORK_RETRY_INTERVAL_SECONDS = 30
+MQTT_TIMEOUT_SECONDS = 2  # Short timeout for non-blocking MQTT operations
+
 try:
     from secrets import secrets
 except ImportError:
@@ -71,7 +75,13 @@ network = Network(status_neopixel=board.NEOPIXEL, debug=False)
 # Network connection state
 network_connected = False
 last_connection_attempt = None
-CONNECTION_RETRY_INTERVAL_SECONDS = 30
+last_mqtt_attempt = None
+
+# Separate temperature sensor reading from MQTT publishing
+last_temp_reading = None
+last_mqtt_publish = None
+cached_temp_fahrenheit = 0
+cached_humidity = 0
 
 # Give WiFi subsystem time to initialize before first connection attempt
 print("Initializing WiFi subsystem...")
@@ -315,193 +325,151 @@ def convert_to_fahrenheit(celsius: float):
     return fahrenheit
 
 
-def subscribe():
-    global network_connected
-    if not network_connected:
-        print("Network not connected, skipping MQTT subscribe")
+def try_mqtt_operation_with_timeout(operation, timeout=MQTT_TIMEOUT_SECONDS):
+    """Try an MQTT operation with a timeout to prevent blocking"""
+    start_time = time.monotonic()
+    try:
+        result = operation()
+        elapsed = time.monotonic() - start_time
+        if elapsed > timeout:
+            print(f"MQTT operation took {elapsed:.2f}s (longer than {timeout}s timeout)")
+        return result
+    except Exception as e:
+        elapsed = time.monotonic() - start_time
+        print(f"MQTT operation failed after {elapsed:.2f}s: {e}")
+        raise
+
+
+def try_mqtt_publish():
+    """Non-blocking MQTT publish attempt - returns immediately if it fails"""
+    global network_connected, last_mqtt_attempt
+    
+    current_time = time.monotonic()
+    
+    # Don't attempt MQTT too frequently to avoid blocking clock updates
+    if (last_mqtt_attempt is not None and 
+        current_time < last_mqtt_attempt + MQTT_RETRY_INTERVAL_SECONDS):
         return False
     
+    if not network_connected:
+        return False
+    
+    last_mqtt_attempt = current_time
+    
     try:
+        # Quick check if MQTT is connected
         if not mqtt.is_connected():
-            print("Initial MQTT connection attempt...")
-            try:
-                mqtt.connect()
-                print("Initial MQTT connection successful")
-            except Exception as connect_error:
-                print(f"Initial MQTT connection failed: {connect_error}")
-                print(f"Connection error type: {type(connect_error).__name__}")
-                raise connect_error
-            
-            try:
-                mqtt.subscribe(secrets["mqtt_topic"])
-                print(f"Initial MQTT subscription to {secrets['mqtt_topic']} successful")
-            except Exception as subscribe_error:
-                print(f"Initial MQTT subscription failed: {subscribe_error}")
-                print(f"Subscription error type: {type(subscribe_error).__name__}")
-                raise subscribe_error
+            print("MQTT disconnected, attempting quick reconnect...")
+            try_mqtt_operation_with_timeout(lambda: mqtt.connect())
+            try_mqtt_operation_with_timeout(lambda: mqtt.subscribe(secrets["mqtt_topic"]))
+        
+        # Prepare and publish message
+        message = '{"temperature": %d,"humidity": %d,"photosensor": %d}' % (
+            round(cached_temp_fahrenheit),
+            round(cached_humidity),
+            round(photocell.value),
+        )
+        
+        try_mqtt_operation_with_timeout(lambda: mqtt.publish(secrets["mqtt_topic"], message))
+        print(f"MQTT published: {message}")
         return True
-    except MQTT.MMQTTException as mqtt_error:
-        print(f"Initial MQTT specific error: {mqtt_error}")
-        print(f"MQTT error type: {type(mqtt_error).__name__}")
-        network_connected = False
-        return False
-    except RuntimeError as runtime_error:
-        print(f"Initial Runtime error: {runtime_error}")
-        print(f"Runtime error type: {type(runtime_error).__name__}")
-        network_connected = False
-        return False
-    except ConnectionError as conn_error:
-        print(f"Initial Connection error: {conn_error}")
-        print(f"Connection error type: {type(conn_error).__name__}")
-        network_connected = False
-        return False
-    except Exception as general_error:
-        print(f"Initial unexpected error: {general_error}")
-        print(f"Error type: {type(general_error).__name__}")
+        
+    except Exception as error:
+        print(f"MQTT publish failed: {error}")
         network_connected = False
         return False
 
 
-def try_reconnect():
+def try_network_reconnect():
+    """Non-blocking network reconnection attempt"""
     global network_connected, last_connection_attempt
     
     current_time = time.monotonic()
     if (last_connection_attempt is not None and 
-        current_time < last_connection_attempt + CONNECTION_RETRY_INTERVAL_SECONDS):
+        current_time < last_connection_attempt + NETWORK_RETRY_INTERVAL_SECONDS):
         return False
     
     last_connection_attempt = current_time
-    print("Attempting to reconnect to network...")
+    print("Attempting network reconnection...")
     
     try:
-        print("Reconnecting to WiFi network...")
         network.connect()
-        print("WiFi reconnection successful")
-        # Mark WiFi as connected before attempting MQTT subscribe so that subscribe()
-        # doesn't bail out early thinking the network is down.
-        network_connected = True
-        
-        print("Setting up MQTT socket...")
         MQTT.set_socket(socket, network._wifi.esp)
-        print("MQTT socket setup successful")
-        
-        if subscribe():
-            network_connected = True
-            print("Full reconnection successful!")
-            return True
-        else:
-            print("MQTT subscription failed during reconnection")
-            return False
+        network_connected = True
+        print("Network reconnected successfully")
+        return True
     except Exception as error:
-        print(f"Reconnection failed: {error}")
-        print(f"Reconnection error type: {type(error).__name__}")
-    
-    network_connected = False
-    return False
+        print(f"Network reconnection failed: {error}")
+        network_connected = False
+        return False
 
 
 # Try initial MQTT connection, but don't crash if it fails
 if network_connected:
-    subscribe()
+    try:
+        mqtt.connect()
+        mqtt.subscribe(secrets["mqtt_topic"])
+        print("Initial MQTT connection successful")
+    except Exception as error:
+        print(f"Initial MQTT connection failed: {error}")
+        network_connected = False
 
+# Main loop with prioritized operations
 while True:
-    # Try to reconnect if network is down
-    if not network_connected:
-        try_reconnect()
+    # PRIORITY 1: Always update time first - this should never be blocked
+    update_time()
     
-    if (
-        last_brightness_check is None
-        or time.monotonic() > last_brightness_check + BRIGHTNESS_INTERVAL_SECONDS
-    ):
+    # PRIORITY 2: Update brightness (every 1 second)
+    if (last_brightness_check is None or 
+        time.monotonic() > last_brightness_check + BRIGHTNESS_INTERVAL_SECONDS):
         
         color[0] = 0x000000  # black background
         color[1] = calculate_color_based_on_photocell_value(photocell.value)
         color[2] = color[1]
-
+        
+        temp_text_area.color = color[2]
+        date_text_area.color = color[2]
+        
         last_brightness_check = time.monotonic()
 
+    # PRIORITY 3: Read temperature sensor (every 60 seconds)
+    if (last_temp_reading is None or 
+        time.monotonic() > last_temp_reading + TEMPERATURE_INTERVAL_SECONDS):
+        
+        try:
+            cached_temp_fahrenheit = convert_to_fahrenheit(temp_sensor.temperature)
+            cached_humidity = temp_sensor.relative_humidity
+            
+            temp_text_area.text = "%d°  %d%%" % (
+                round(cached_temp_fahrenheit),
+                round(cached_humidity),
+            )
+            
+            nowtime = time.localtime()
+            printedtime = "%02d:%02d:%02d" % (
+                nowtime.tm_hour,
+                nowtime.tm_min,
+                nowtime.tm_sec,
+            )
+            
+            connection_status = "connected" if network_connected else "disconnected"
+            print(
+                "time=%s | temp= %d | humidity=%d | photocell=%d | network=%s"
+                % (printedtime, cached_temp_fahrenheit, cached_humidity, photocell.value, connection_status),
+            )
+            
+            last_temp_reading = time.monotonic()
+            
+        except Exception as error:
+            print(f"Temperature sensor read failed: {error}")
 
-    temp_text_area.color = color[2]
-    date_text_area.color = color[2]
-
-    if (
-        last_temp_check is None
-        or time.monotonic() > last_temp_check + TEMPERATURE_INTERVAL_SECONDS
-    ):
-        currentTempInCelsius = temp_sensor.temperature
-        currentHumidity = temp_sensor.relative_humidity
-        currentTempInFahrenheit = convert_to_fahrenheit(currentTempInCelsius)
-
-        # Only try MQTT if network is connected
-        if network_connected:
-            try:
-                if not mqtt.is_connected():
-                    print("MQTT not connected, attempting to connect...")
-                    try:
-                        mqtt.connect()
-                        print("MQTT connected successfully")
-                    except Exception as connect_error:
-                        print(f"MQTT connection failed: {connect_error}")
-                        print(f"Connection error type: {type(connect_error).__name__}")
-                        raise connect_error
-                    
-                    try:
-                        mqtt.subscribe(secrets["mqtt_topic"])
-                        print(f"MQTT subscribed to topic: {secrets['mqtt_topic']}")
-                    except Exception as subscribe_error:
-                        print(f"MQTT subscription failed: {subscribe_error}")
-                        print(f"Subscription error type: {type(subscribe_error).__name__}")
-                        raise subscribe_error
-                
-                # Prepare the message
-                message = '{"temperature": %d,"humidity": %d,"photosensor": %d}' % (
-                    round(currentTempInFahrenheit),
-                    round(currentHumidity),
-                    round(photocell.value),
-                )
-                print(f"Attempting to publish message: {message}")
-                
-                mqtt.publish(secrets["mqtt_topic"], message)
-                print("MQTT message published successfully")
-                
-            except MQTT.MMQTTException as mqtt_error:
-                print(f"MQTT specific error: {mqtt_error}")
-                print(f"MQTT error type: {type(mqtt_error).__name__}")
-                network_connected = False
-            except RuntimeError as runtime_error:
-                print(f"Runtime error during MQTT operation: {runtime_error}")
-                print(f"Runtime error type: {type(runtime_error).__name__}")
-                network_connected = False
-            except ConnectionError as conn_error:
-                print(f"Connection error during MQTT operation: {conn_error}")
-                print(f"Connection error type: {type(conn_error).__name__}")
-                network_connected = False
-            except Exception as general_error:
-                print(f"Unexpected error during MQTT operation: {general_error}")
-                print(f"Error type: {type(general_error).__name__}")
-                network_connected = False
-        else:
-            print("Network not connected - skipping MQTT publish")
-
-        temp_text_area.text = "%d°  %d%%" % (
-            round(currentTempInFahrenheit),
-            round(currentHumidity),
-        )
-
-        nowtime = time.localtime()
-        printedtime = "%02d:%02d:%02d" % (
-            nowtime.tm_hour,
-            nowtime.tm_min,
-            nowtime.tm_sec,
-        )
-
-        connection_status = "connected" if network_connected else "disconnected"
-        print(
-            "time=%s | temp= %d | humidity=%d | photocell=%d | network=%s"
-            % (printedtime, currentTempInFahrenheit, currentHumidity, photocell.value, connection_status),
-        )
-
-        last_temp_check = time.monotonic()
-
-    update_time()
+    # PRIORITY 4: Network reconnection (non-blocking, less frequent)
+    if not network_connected:
+        try_network_reconnect()
+    
+    # PRIORITY 5: MQTT operations (fully asynchronous, least important)
+    if network_connected and last_temp_reading is not None:
+        try_mqtt_publish()
+    
+    # Short sleep to prevent excessive CPU usage while maintaining responsiveness
     time.sleep(0.01)
