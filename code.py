@@ -117,6 +117,7 @@ last_brightness_check = None
 last_mqtt_attempt = None
 cached_temp_fahrenheit = 0
 cached_humidity = 0
+mqtt_initialized = False
 
 
 DARKEST_COLOR = 255
@@ -188,6 +189,15 @@ if network_connected:
     except Exception as error:
         print(f"Failed to set MQTT socket: {error}")
         network_connected = False
+    # Defer MQTT connect/subscribe until after functions are defined
+    mqtt_initialized = False
+    # Ensure the ESP32SPI socket has a short timeout to avoid blocking
+    try:
+        # Many builds expose this; if not, this will no-op
+        network._wifi.esp.set_socket_timeout(MQTT_TIMEOUT_SECONDS)
+        print("ESP32SPI socket timeout set for MQTT operations")
+    except Exception as _timeout_err:
+        pass
 
 
 def set_color_bright():
@@ -435,17 +445,9 @@ def try_mqtt_publish():
     last_mqtt_attempt = current_time
     
     try:
-        # Quick timeout check - if MQTT is not connected, try a quick reconnect
+        # Do not attempt reconnects here to avoid blocking; skip if disconnected
         if not mqtt.is_connected():
-            print("MQTT disconnected, attempting quick reconnect...")
-            start_time = time.monotonic()
-            mqtt.connect()
-            mqtt.subscribe(secrets["mqtt_topic"])
-            elapsed = time.monotonic() - start_time
-            if elapsed > MQTT_TIMEOUT_SECONDS:
-                print(f"MQTT reconnect took too long ({elapsed:.2f}s)")
-                network_connected = False
-                return False
+            return False
         
         # Prepare and publish message using cached sensor data
         message = '{"temperature": %d,"humidity": %d,"photosensor": %d}' % (
@@ -454,6 +456,12 @@ def try_mqtt_publish():
             round(photocell.value),
         )
         
+        # Reassert a short socket timeout right before network I/O
+        try:
+            network._wifi.esp.set_socket_timeout(MQTT_TIMEOUT_SECONDS)
+        except Exception:
+            pass
+
         start_time = time.monotonic()
         mqtt.publish(secrets["mqtt_topic"], message)
         elapsed = time.monotonic() - start_time
@@ -466,7 +474,6 @@ def try_mqtt_publish():
         
     except Exception as error:
         print(f"MQTT publish failed: {error}")
-        network_connected = False
         return False
 
 
@@ -529,19 +536,15 @@ while True:
     
     # PRIORITY 5: MQTT operations (fully asynchronous, least important)
     if network_connected:
-        try_mqtt_publish()
-        
-        # Quick MQTT loop maintenance (with timeout protection)
-        if mqtt.is_connected():
+        # Perform initial MQTT connect/subscribe once, after all functions exist
+        if not mqtt_initialized:
             try:
-                start_time = time.monotonic()
-                mqtt.loop()
-                elapsed = time.monotonic() - start_time
-                if elapsed > MQTT_TIMEOUT_SECONDS:
-                    print(f"MQTT loop took too long ({elapsed:.2f}s)")
-            except Exception as loop_error:
-                print(f"MQTT loop error: {loop_error}")
-                network_connected = False
+                if subscribe():
+                    mqtt_initialized = True
+            except Exception as _init_err:
+                # Leave mqtt_initialized False; will retry on next loop
+                pass
+        try_mqtt_publish()
     
     # Short sleep to prevent excessive CPU usage while maintaining responsiveness
     time.sleep(0.01)
