@@ -69,9 +69,6 @@ prevss = 0
 last_temp_check = None
 last_brightness_check = None
 
-DARKEST_COLOR = 255
-BRIGHTEST_COLOR = 16711680
-
 PHOTOCELL_MAX_VALUE = 5000
 PHOTOCELL_MIN_VALUE = 0
 
@@ -123,22 +120,15 @@ group.append(bg_sprite)
 display.show(group)
 gc.collect()  # Clean up memory after display setup
 
-def set_color_bright():
-    global color
-    color[0] = 0x000000  # black background
-    color[1] = BRIGHTEST_COLOR
-    color[2] = BRIGHTEST_COLOR
 
-
-def set_color_dark():
-    global color
-    color[0] = 0x000000  # black background
-    color[1] = DARKEST_COLOR
-    color[2] = DARKEST_COLOR
     
 
 
-set_color_bright()
+# Calculate initial color based on photocell value before creating text labels
+initial_color = calculate_color_based_on_photocell_value(photocell.value)
+color[0] = 0x000000  # black background
+color[1] = initial_color
+color[2] = initial_color
 
 ##########################################################################
 
@@ -265,13 +255,14 @@ while True:
     # PRIORITY 1: Always update time first - this should never be blocked
     update_time()
     
-    # PRIORITY 2: Update brightness (every 1 second)
+    # PRIORITY 2: Update brightness (every 1 second) - also do initial check immediately
     if (last_brightness_check is None or 
         time.monotonic() > last_brightness_check + BRIGHTNESS_INTERVAL_SECONDS):
         
+        new_color = calculate_color_based_on_photocell_value(photocell.value)
         color[0] = 0x000000  # black background
-        color[1] = calculate_color_based_on_photocell_value(photocell.value)
-        color[2] = color[1]
+        color[1] = new_color
+        color[2] = new_color
         
         temp_text_area.color = color[2]
         date_text_area.color = color[2]
