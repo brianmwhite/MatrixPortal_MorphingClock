@@ -34,6 +34,7 @@ import adafruit_sht4x # type: ignore
 import analogio # type: ignore
 import board # type: ignore
 import displayio # type: ignore
+import digitalio # type: ignore
 import rtc # type: ignore
 import terminalio # type: ignore
 from adafruit_bitmap_font import bitmap_font # type: ignore
@@ -54,6 +55,12 @@ rtc.set_time_source(ds3231)
 temp_sensor = adafruit_sht4x.SHT4x(board.I2C())
 photocell = analogio.AnalogIn(board.A0)
 
+up_button = digitalio.DigitalInOut(board.BUTTON_UP)
+up_button.switch_to_input(pull=digitalio.Pull.UP)
+
+down_button = digitalio.DigitalInOut(board.BUTTON_DOWN)
+down_button.switch_to_input(pull=digitalio.Pull.UP)
+
 # --- Display setup ---
 gc.collect()
 print_memory_info("Before Matrix setup")
@@ -68,6 +75,8 @@ prevss = 0
 
 last_temp_check = None
 last_brightness_check = None
+up_button_was_pressed = False
+down_button_was_pressed = False
 
 PHOTOCELL_MAX_VALUE = 5000
 PHOTOCELL_MIN_VALUE = 0
@@ -246,6 +255,25 @@ def convert_to_fahrenheit(celsius: float):
     return (celsius * 1.8) + 32
 
 
+def adjust_rtc_hours(hour_delta: int):
+    current_time = ds3231.datetime
+    adjusted_epoch = time.mktime(current_time) + (hour_delta * 60 * 60)
+    ds3231.datetime = time.localtime(adjusted_epoch)
+
+    print(
+        "Adjusted RTC by %d hour(s): %04d-%02d-%02d %02d:%02d:%02d"
+        % (
+            hour_delta,
+            ds3231.datetime.tm_year,
+            ds3231.datetime.tm_mon,
+            ds3231.datetime.tm_mday,
+            ds3231.datetime.tm_hour,
+            ds3231.datetime.tm_min,
+            ds3231.datetime.tm_sec,
+        )
+    )
+
+
 # Perform an initial draw now that update_time exists
 update_time()
 
@@ -254,6 +282,18 @@ update_time()
 while True:
     # PRIORITY 1: Always update time first - this should never be blocked
     update_time()
+
+    up_button_pressed = not up_button.value
+    down_button_pressed = not down_button.value
+
+    if up_button_pressed and not up_button_was_pressed:
+        adjust_rtc_hours(1)
+
+    if down_button_pressed and not down_button_was_pressed:
+        adjust_rtc_hours(-1)
+
+    up_button_was_pressed = up_button_pressed
+    down_button_was_pressed = down_button_pressed
     
     # PRIORITY 2: Update brightness (every 1 second) - also do initial check immediately
     if (last_brightness_check is None or 
