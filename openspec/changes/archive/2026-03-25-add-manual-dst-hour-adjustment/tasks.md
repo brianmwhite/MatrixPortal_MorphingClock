@@ -11,6 +11,6 @@
 
 ## 3. Validation
 
-- [ ] 3.1 Verify on hardware that one `up` press advances the clock by one hour and one `down` press moves it back by one hour
-- [ ] 3.2 Verify that holding either button does not repeat adjustments until the button is released and pressed again
-- [ ] 3.3 Verify that midnight crossings update both hour and date correctly in both directions
+- [x] 3.1 Verify on hardware that one `up` press advances the clock by one hour and one `down` press moves it back by one hour
+- [x] 3.2 Verify that holding either button does not repeat adjustments until the button is released and pressed again
+- [x] 3.3 Verify that midnight crossings update both hour and date correctly in both directions
